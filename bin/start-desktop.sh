@@ -63,6 +63,11 @@ sleep 1
 echo "6. noVNC Webクライアント (port 6080) を起動..."
 websockify --web /usr/share/novnc 6080 localhost:5900 &
 WEBSOCKIFY_PID=$!
+sleep 1
+
+# 7. Goose Desktop GUI アプリの自動起動
+echo "7. Goose Desktop GUI アプリを起動..."
+/usr/lib/goose/Goose &
 
 echo "=========================================================="
 echo " GUI デスクトップが準備完了しました！"
