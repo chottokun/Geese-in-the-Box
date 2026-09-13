@@ -1,149 +1,71 @@
-実装担当者（リポジトリの構築・CI整備・設定ファイルを実際にコーディング・保守するエンジニア）向けに、具体的な設定ファイルの内容と実装要件をまとめた仕様書です。
+# 【実装・保守担当向け】Goose-in-the-Box 実装仕様・要件メモ
+
+Goose-in-the-Box の設定ファイル、ネットワーク境界、運用スクリプトの仕様および保守ガイドです。
 
 ---
 
-**【実装担当向け】Goose Egress サンドボックス 実装仕様・要件書**
+## 1. 主要ファイルと責務
 
-**1. 実装チェックリスト**
+### (1) `squid/squid.conf` & `squid/whitelist.txt`
+- **責務**: L7 外部通信の監査・遮断。
+- **仕様**:
+  - `acl allowed_domains dstdomain "/etc/squid/whitelist.txt"` でドメイン制御。
+  - Safe_ports に 11434 (Ollama) を許可。
+  - 構造化 JSON ログフォーマット（`logformat json_custom ...`）で `/var/log/squid/access.json` に出力。
+  - `make reload`（`squid -k reconfigure`）で動的反映。
 
-* [ ] `squid.conf` を修正し、ホワイトリストを `whitelist.txt` 外部読み込みに変更
-* [ ] `docker-compose.yml` に `egress-proxy` のヘルスチェックと依存関係（`depends_on`）を追加
-* [ ] `./workspace` の UID/GID 権限問題を環境変数で吸収できる設計を導入
-* [ ] `Makefile` の各ターゲットにプロキシ依存関係と `clean` 処理を追加
-* [ ] GitHub Actions（`ci.yml`）で `make test` を自動実行するパイプラインを定義
+### (2) `nginx/nginx.conf`
+- **責務**: Ingress リバースプロキシ（外部からの WebSocket / HTTP 受信）。
+- **仕様**:
+  - ポート 6080（noVNC）および 3284（Goose ACP）を転送。
+  - `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "Upgrade";` で WebSocket 完全対応。
+  - `resolver 127.0.0.11 valid=5s;` で Docker 内部 DNS による動的 upstream 解決（コンテナ起動順序に依存しない耐障害性）。
 
----
+### (3) `goose/Dockerfile`
+- **責務**: エージェント作業コンテナ環境の定義。
+- **仕様**:
+  - `ghcr.io/astral-sh/uv:latest` より `uv`, `uvx` をマルチステージコピー。
+  - Debian bookworm-slim ベース。
+  - `python3-pip`, `python3-venv`, `pipx`, `nodejs`, `npm`, `tmux`, `build-essential` を導入。
+  - 公式 Goose Desktop 1.50.0 (`.deb`) を導入し、`/usr/lib/goose/Goose` を `--no-sandbox` ラッパーに置換。
+  - `/usr/local/bin/goose` を純粋な CLI バイナリ（`/usr/lib/goose/resources/bin/goose`）へリンク。
+  - Fcitx5 + Mozc 日本語入力設定、Git 自動設定（`user.name`, `user.email`, `safe.directory`）。
 
-**2. 主要ファイルの実装詳細**
-
-**`squid/squid.conf` & `squid/whitelist.txt**`
-外部ファイルからドメインを読み込む設定にします。
-
-```text
-# squid/squid.conf
-acl allowed_domains dstdomain "/etc/squid/whitelist.txt"
-http_access allow allowed_domains
-http_access deny all
-http_port 3128
-
-```
-
-```text
-# squid/whitelist.txt
-# サブドメイン全体を許可する場合は先頭にドット（例: .anthropic.com）
-api.openai.com
-.anthropic.com
-
-```
-
----
-
-**`docker-compose.yml`**
-プロキシのヘルスチェック、依存関係、ユーザーIDの柔軟性、設定永続化マウントを定義します。
-
-```yaml
-services:
-  egress-proxy:
-    image: ubuntu/squid:latest
-    volumes:
-      - ./squid/squid.conf:/etc/squid/squid.conf:ro
-      - ./squid/whitelist.txt:/etc/squid/whitelist.txt:ro
-    networks:
-      - sandbox-internal
-      - public-egress
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 3128 || exit 1"]
-      interval: 3s
-      timeout: 3s
-      retries: 5
-
-  goose-agent:
-    build:
-      context: .
-      dockerfile: goose/Dockerfile
-    user: "${UID:-1000}:${GID:-1000}"
-    environment:
-      - HTTP_PROXY=http://egress-proxy:3128
-      - HTTPS_PROXY=http://egress-proxy:3128
-      - http_proxy=http://egress-proxy:3128
-      - https_proxy=http://egress-proxy:3128
-    env_file:
-      - .env
-    volumes:
-      - ./workspace:/workspace:rw
-      - ./config:/home/sandboxuser/.config/goose:rw
-    working_dir: /workspace
-    networks:
-      - sandbox-internal
-    depends_on:
-      egress-proxy:
-        condition: service_healthy
-
-networks:
-  sandbox-internal:
-    internal: true   # ホスト外への直接ルーティングを遮断[cite: 2]
-  public-egress:      # プロキシのみが外部と通信可能
-
-```
+### (4) `docker-compose.yml`
+- **責務**: コンテナ構成・ネットワーク・永続化ボリュームの結合。
+- **仕様**:
+  - `internal-net`: `internal: true` により外部通信が一切不可。
+  - `external-net`: プロキシのみが所属。
+  - 環境変数: `GOOSE_DISABLE_KEYRING=1`, `CONTEXT_FILE_NAMES=.goosehints,AGENTS.md`
+  - ボリュームマウント:
+    - `./workspace:/workspace:rw` (作業コード)
+    - `./config:/home/sandboxuser/.config/goose:rw` (設定)
+    - `./data/sessions:/home/sandboxuser/.local/share/goose/sessions:rw` (セッションDB)
+    - `./data/logs:/home/sandboxuser/.local/state/goose/logs:rw` (Gooseログ)
 
 ---
 
-**`Makefile`**
-手動コマンドミスを防ぐため、プロキシ起動を前提条件にします。
+## 2. 運用・保守コマンド
 
-```makefile
-.PHONY: build up-proxy test session logs clean
+```bash
+# ビルド
+make build
 
-build:
-	docker compose build
+# 起動（全コンテナ）
+make gui
 
-up-proxy:
-	docker compose up -d egress-proxy
+# 通信遮断テスト
+make test
 
-test: up-proxy
-	docker compose run --rm goose-agent /workspace/../bin/test-egress.sh
+# ログ監視
+make logs              # CLI JSONログ
+make audit-denied      # 403 遮断ログのみ抽出
+make audit-summary     # ドメイン別集計
 
-session: up-proxy
-	docker compose run --rm goose-agent
+# キルスイッチ
+make block-all         # 緊急全遮断
+make unblock           # 遮断解除
 
-logs:
-	docker exec -it $$(docker compose ps -q egress-proxy) tail -f /var/log/squid/access.log
-
-clean:
-	git clean -fdX workspace/ config/
-
-```
-
----
-
-**`.github/workflows/ci.yml`**
-PR作成時に設定が壊れていないか、遮断テストを自動実行します。
-
-```yaml
-name: CI Sandbox Egress Test
-
-on:
-  pull_request:
-    paths:
-      - 'squid/**'
-      - 'goose/**'
-      - 'docker-compose.yml'
-      - 'bin/**'
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup environment
-        run: |
-          touch .env
-          mkdir -p workspace config
-
-      - name: Run Egress Test
-        run: |
-          make build
-          make test
-
+# 成果物エクスポート
+make export-workspace  # exports/ 配下に日付付き tar.gz を出力
 ```

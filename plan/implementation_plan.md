@@ -1,14 +1,9 @@
-# Goose-in-the-Box: コンテナ完全通信制御＆監査サンドボックス 実装計画書 (v3)
+# Goose-in-the-Box: コンテナ完全通信制御＆監査サンドボックス 実装計画書 (v4)
 
 > **基本方針**:
 > ハイパーバイザー型 VM（Multipass 等）のような重厚な仮想化レイヤーは不要とし、**Docker コンテナ基盤** を採用する。
 > Docker の `internal: true` ネットワーク（L3/L4）と、Squid フォワードプロキシ（L7）の **2段構え** により、AI エージェントの勝手な外部通信を 100% 遮断し、全通信を構造化 JSON ログに記録・監査する。
->
-> **達成する要件**:
-> 1. **後方互換性は不要**: 古い構成や未整理のファイルは一掃する。
-> 2. **完全な通信制御**: 許可したドメイン以外への外部通信は物理的・論理的に遮断（プロキシバイパスの完全排除）。
-> 3. **監査ログの厳密な記録**: 許可・拒否を問わず、全接続試行を ISO8601 タイムスタンプ付きの構造化 JSON ログに出力。
-> 4. **軽量・即時検証**: 手元の Docker 環境ですぐに実動テスト可能。
+> さらに、**公式 Goose Desktop GUI（noVNC ブラウザ提供）**、**日本語入力環境（Fcitx5+Mozc）**、**MCP/パッケージ実行基盤（uv/uvx, npm/npx, pipx）**、および **成果物エクスポート** を備えた完全なスターター状態を提供する。
 
 ---
 
@@ -18,146 +13,119 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ホストマシン                                                                │
 │                                                                             │
-│  [Goose Desktop (GUI)] ─── HTTP (localhost:3284) ──┐                        │
-│  [ブラウザ / 監査CLI]   ─── 監査ログ・集計 ───────────┼──────────────────┐   │
-│                                                     │                  │   │
-└─────────────────────────────────────────────────────┼──────────────────┼───┘
-                                                      │                  │
-                      ┌───────────────────────────────┼──────────────────┼───┐
-                      │ Docker 仮想ネットワーク境界   │                  │   │
-                      │                               │                  │   │
-                      │  ┌────────────────────────────▼───────────────┐  │   │
-                      │  │ goose-agent コンテナ                        │  │   │
-                      │  │  ├─ Goose CLI / ACP serve (3284)           │  │   │
-                      │  │  ├─ workspace/ (AGENTS.md, スキル, ルール) │  │   │
-                      │  │  ├─ テレメトリ無効化 (TELEMETRY=false)     │  │   │
-                      │  │  └─ HTTP_PROXY=http://egress-proxy:3128    │  │   │
-                      │  └────────────────────┬───────────────────────┘  │   │
-                      │                       │                          │   │
-                      │                       ▼                          │   │
-                      │  ══════════════════════════════════════════════  │   │
-                      │   internal-net (bridge, internal: true)          │   │
-                      │   ※ 外部ゲートウェイなし。直接パケット送信は     │   │
-                      │      カーネルが「Network unreachable」で即破棄   │   │
-                      │  ══════════════════════════════════════════════  │   │
-                      │                       │                          │   │
-                      │                       ▼                          │   │
-                      │  ┌────────────────────────────────────────────┐  │   │
-                      │  │ egress-proxy コンテナ (Squid 7.x)           │  │   │
-                      │  │  ├─ ドメインホワイトリスト判定 (L7)         │  │   │
-                      │  │  │  (whitelist.txt 以外は 403 Forbidden)   │  │   │
-                      │  │  ├─ JSON 構造化監査ログ (/var/log/squid/)   │──┼───┘
-                      │  │  └─ ポート 3128 リスニング                 │  │
-                      │  └────────────────────┬───────────────────────┘  │
-                      │                       │                          │
-                      │  ═════════════════════╪════════════════════════  │
-                      │   external-net (bridge)                          │
-                      │  ═════════════════════╪════════════════════════  │
-                      └───────────────────────┼──────────────────────────┘
-                                              ▼
-                                 インターネット (外部 LLM API 等)
-```
-
-### 通信制御の2段構え（多層防御）
-
-| レイヤー | 制御手段 | 具体的な動作と効果 |
-|---------|---------|-------------------|
-| **L3 / L4 (ネットワーク層)** | Docker `internal: true` | コンテナに外部向けデフォルトゲートウェイが割り当てられない。エージェントがプロキシ設定を無視して直接外部通信を試みても、OS カーネルがパケットを即座に破棄（プロキシ迂回は物理的に不可能）。 |
-| **L7 (アプリケーション層)** | Squid フォワードプロキシ | `whitelist.txt` に記載されたドメイン宛ての CONNECT / HTTP リクエストのみ通過を許可。未許可ドメインは `403 Forbidden` で遮断。 |
-| **監査 (Audit)** | Squid JSON ロガー | 全てのリクエスト（通過・遮断・エラー）について、日時、クライアントIP、宛先ドメイン、メソッド、レスポンスコード、送受信バイト数を JSON 形式で `/var/log/squid/access.json` に記録。 |
-
----
-
-## 2. ディレクトリ構成と成果物
-
-```text
-goose-in-the-box/
-├── docker-compose.yml       # 内部隔離(internal-net)と外部プロキシ(external-net)の定義
-├── Makefile                 # ビルド、テスト、セッション起動、監査集計ワンライナー
-├── README.md                # セットアップ・テスト・監査手順の完全ガイド
-├── .env.example             # LLMプロバイダー用APIキーテンプレート
-├── squid/
-│   ├── squid.conf           # 厳格なフォワードプロキシ設定 + JSON構造化監査ログ定義
-│   └── whitelist.txt        # 許可ドメイン一覧（OpenAI, Anthropic, Gemini, GitHub等）
-├── goose/
-│   └── Dockerfile           # Goose CLI + 依存ツールを導入した軽量コンテナ
-├── bin/
-│   ├── test-egress.sh       # 通信遮断・プロキシ迂回防止・監査ログの自動検証スクリプト
-│   └── start-goose.sh       # AGENTS.md / ルール自動結合とGoose対話セッション起動
-├── workspace/               # Goose作業ディレクトリ（ホストとマウント）
-│   ├── AGENTS.md            # 作業ルール・セキュリティガイドライン
-│   └── .agents/             # スキルや分割ルールの配置場所
-├── logs/                    # Squid 監査ログ出力先（ホストから閲覧可能）
-│   └── squid/
-│       ├── access.json      # JSON 構造化監査ログ
-│       └── access.log       # テキスト形式ログ
-└── plan/
-    └── implementation_plan.md # 本計画書
+│  [ブラウザ (Web)] ─── HTTP (localhost:6080/vnc.html) ──────────┐            │
+│  [Goose Desktop] ──── HTTP (localhost:3284) ────────────────────┤            │
+│  [Webログ監視]   ──── HTTP (localhost:8080 Dozzle) ──┐          │            │
+│  [監査CLI/集計]  ──── 監査ログ閲覧 (make audit-summary) ┼───────┼────────┐   │
+│  [成果物共有]    ──── ./workspace (リアルタイム同期)  │       │        │   │
+└───────────────────────────────────────────────────────┼───────┼────────┼───┘
+                                                        │       │        │
+                        ┌───────────────────────────────┼───────┼────────┼───┐
+                        │ Docker 仮想ネットワーク境界   │       │        │   │
+                        │                               ▼       │        │   │
+                        │  ┌─────────────────────────────────┐  │        │   │
+                        │  │ ingress-proxy (Nginx: 6080/3284)│  │        │   │
+                        │  │  └─ WebSocket / noVNC / ACP 中継│  │        │   │
+                        │  └────────────────┬────────────────┘  │        │   │
+                        │                   │                   │        │   │
+                        │  ┌────────────────▼────────────────┐  │        │   │
+                        │  │ goose-agent コンテナ            │  │        │   │
+                        │  │  ├─ Goose Desktop GUI (Electron)│  │        │   │
+                        │  │  ├─ Goose CLI (純粋バイナリ)    │  │        │   │
+                        │  │  ├─ Xfce4 + Xvfb + noVNC        │  │        │   │
+                        │  │  ├─ Fcitx5 + Mozc (日本語入力)  │  │        │   │
+                        │  │  ├─ uv / uvx / pipx (Python MCP)│  │        │   │
+                        │  │  ├─ node / npm / npx (Node MCP) │  │        │   │
+                        │  │  ├─ tmux (セッション/プロセス)  │  │        │   │
+                        │  │  ├─ git (自動初期設定済み)      │  │        │   │
+                        │  │  ├─ .goosehints / AGENTS.md     │  │        │   │
+                        │  │  └─ HTTP_PROXY=egress-proxy:3128│  │        │   │
+                        │  └────────────────┬────────────────┘  │        │   │
+                        │                   │                   │        │   │
+                        │  ═════════════════▼═════════════════  │        │   │
+                        │   internal-net (bridge, internal:true)│        │   │
+                        │   ※ 外部ゲートウェイなし。直接通信は │        │   │
+                        │      カーネルが「Network unreachable」│        │   │
+                        │  ═════════════════╤═════════════════  │        │   │
+                        │                   │                   │        │   │
+                        │  ┌────────────────▼────────────────┐  │        │   │
+                        │  │ egress-proxy コンテナ (Squid)   │  │        │   │
+                        │  │  ├─ ドメインホワイトリスト判定  │  │        │   │
+                        │  │  │  (whitelist.txt 以外は 403)  │  │        │   │
+                        │  │  ├─ JSON 構造化監査ログ         │──┴────────┼───┘
+                        │  │  └─ ポート 3128 リスニング      │           │
+                        │  └────────────────┬────────────────┘           │
+                        │                   │                            │
+                        │  ┌────────────────▼────────────────┐           │
+                        │  │ dozzle (Web ログビューワー:8080)│───────────┘
+                        │  └─────────────────────────────────┘
+                        │                   │
+                        │  ═════════════════╪═════════════════
+                        │   external-net (bridge)
+                        │  ═════════════════╪═════════════════
+                        └───────────────────┼─────────────────
+                                            ▼
+                               インターネット (LLM API, PyPI, npm, GitHub)
 ```
 
 ---
 
-## 3. 実装・検証タスク詳細
+## 2. 実装されたコンポーネント詳細
 
-### タスク 1: 通信制御・プロキシ設定の最適化（完了）
-- `squid/squid.conf`:
-  - Docker 内部ネットワーク（RFC 1918 プライベートIP空間）からの接続のみを受け付ける。
-  - リバースプロキシなど余分な設定を排し、ピュアなフォワードプロキシに特化。
-  - `logformat json_audit` による詳細な JSON ログ定義。
-- `squid/whitelist.txt`:
-  - 主要 LLM（OpenAI, Anthropic, Gemini, Azure, AWS Bedrock 等）および GitHub ドメインを定義。
+### (1) Egress Control Proxy (Squid)
+- **設定ファイル**: `squid/squid.conf`, `squid/whitelist.txt`
+- **機能**:
+  - `whitelist.txt` 記載ドメインのみ `CONNECT / GET` を許可、未登録は `403 Forbidden`。
+  - Safe_ports に 11434 (Ollama) を許可。
+  - パッケージリポジトリ（`pypi.org`, `files.pythonhosted.org`, `registry.npmjs.org`）の通信を許可。
+  - ISO8601 タイムスタンプ付き構造化 JSON ログ（`/var/log/squid/access.json`）を常時出力。
+  - `make reload` による動的設定反映、`make block-all` / `make unblock` による完全キルスイッチ。
 
-### タスク 2: コンテナとネットワークの定義（完了）
-- `docker-compose.yml`:
-  - `egress-proxy`: `internal-net` と `external-net` の両方に接続。
-  - `goose-agent`: `internal-net` のみに接続（`internal: true`）。外部直接接続不可。
-  - `GOOSE_TELEMETRY_ENABLED=false` をデフォルト適用。
-- `goose/Dockerfile`:
-  - 最新の Goose CLI をインストール。
-  - 非 root ユーザー `sandboxuser` による最小権限実行。
+### (2) Ingress Reverse Proxy (Nginx)
+- **設定ファイル**: `nginx/nginx.conf`
+- **ポート**: `6080` (noVNC), `3284` (Goose ACP)
+- **機能**:
+  - WebSocket（`Upgrade`, `Connection "Upgrade"`）を完全サポート。
+  - Docker 内部 DNS（`resolver 127.0.0.11`）による動的 upstream 解決（起動順序依存クラッシュの回避）。
 
-### タスク 3: 通信遮断テストスイートの作成（完了）
-- `bin/test-egress.sh`:
-  1. **ホワイトリスト通信**: `curl --proxy http://egress-proxy:3128 https://api.openai.com` → 成功を確認。
-  2. **非許可ドメイン通信**: `curl --proxy http://egress-proxy:3128 https://www.google.com` → 403 Forbidden 遮断を確認。
-  3. **プロキシバイパス（直接通信）**: `curl --noproxy "*" --connect-timeout 3 https://api.openai.com` → `Network unreachable` で遮断を確認。
+### (3) Goose Agent Container (隔離作業環境)
+- **Dockerfile**: `goose/Dockerfile`
+- **機能**:
+  - **公式 Goose Desktop 1.50.0**: `--no-sandbox` & Ozone IME ラッパー経由で Xfce4 デスクトップ上に起動。
+  - **純粋 CLI バイナリ**: `/usr/local/bin/goose` を resources 配下の純粋バイナリに紐付け、ターミナルからの `goose session` を安定実行。
+  - **日本語環境**: `C.UTF-8` ロケール、Noto CJK フォント、Fcitx5 + Mozc 日本語入力。
+  - **MCP・開発ランタイム**:
+    - `uv` / `uvx` (0.12.13): Astral 公式マルチステージコピーによる決定論的ビルド。
+    - `pipx` (1.1.0): 独立仮想環境での Python ツール実行。
+    - `python3-pip`, `python3-venv`, `nodejs`, `npm`, `npx`
+    - `tmux 3.3a`: マウス有効化、セッション・常駐サーバー管理。
+    - `build-essential`, `wget`, `unzip`, `patch`, `nano`, `less`, `htop`, `tree`
+  - **Git 初期設定**: `user.name`, `user.email`, `safe.directory /workspace`, `init.defaultBranch main`。
+  - **公式ヒント & 秘密情報**:
+    - `/workspace/.goosehints`（プロジェクト指示書）
+    - `CONTEXT_FILE_NAMES=.goosehints,AGENTS.md`
+    - `GOOSE_DISABLE_KEYRING=1`（Keyring エラー回避）
+  - **データ永続化**:
+    - `./workspace:/workspace:rw`（コードのリアルタイム同期）
+    - `./config:/home/sandboxuser/.config/goose:rw`（設定永続化）
+    - `./data/sessions:/home/sandboxuser/.local/share/goose/sessions:rw`（セッションDB）
+    - `./data/logs:/home/sandboxuser/.local/state/goose/logs:rw`（ログ）
 
-### タスク 4: 監査コマンド・UX整備（完了）
-- `Makefile`:
-  - `make test`: 通信遮断テストのワンクリック実行。
-  - `make session`: Goose CLI セッション開始。
-  - `make serve`: ホストの Goose Desktop から接続可能な ACP サーバー起動。
-  - `make logs`: リアルタイム JSON 監査ログ監視。
-  - `make audit-denied`: 遮断された通信のみを抽出表示。
-  - `make audit-summary`: アクセス頻度トップ10ドメインを集計。
-
-### タスク 5: GUI デスクトップ & Ingress プロキシ分離（完了）
-- `nginx/nginx.conf`:
-  - ホストからの noVNC Web UI / WebSocket (6080) および ACP (3284) を内部の `goose-agent` へ転送。
-- `docker-compose.yml`:
-  - `ingress-proxy` (Nginx), `egress-proxy` (Squid), `goose-agent` (隔離) の3層分離アーキテクチャ。
-- `goose/Dockerfile` & `bin/start-desktop.sh`:
-  - Xfce4 デスクトップ、Xvfb、noVNC、x11vnc、公式 Goose Desktop GUI (`.deb`)、Fcitx5 + Mozc 日本語入力を導入。
-
-### タスク 6: 各種パラメータの .env 一元化 & 運用監視強化（完了）
-- `.env` / `.env.example`:
-  - ポート（`NOVNC_PORT`, `GOOSE_SERVE_PORT`, `SQUID_PORT`, `DOZZLE_PORT`）
-  - 画面解像度（`RESOLUTION`）、タイムゾーン（`TZ=Asia/Tokyo`）、共有メモリ（`SHM_SIZE`）、UID/GID を一元設定可能に。
-- Dozzle (Web ログビューワー: `http://localhost:8080`) の導入（PR #1 マージ）。
-- ホワイトリスト動的リロード（`make reload`）および完全キルスイッチ（`make block-all` / `make unblock`）の導入。
+### (4) 成果物エクスポート
+- `make export-workspace` により、`./workspace` の最新成果物を日付付きアーカイブ（`exports/workspace_YYYYMMDD_HHMMSS.tar.gz`）としてワンライナーで出力。
 
 ---
 
-## 4. 実動テスト手順と受入基準
+## 3. 受入基準と検証結果
 
-| # | 検証項目 | コマンド / 手順 | 期待される結果 |
+| # | 検証項目 | 検証コマンド / 操作 | 結果 |
 |---|---|---|---|
-| 1 | イメージビルド | `make build` | Docker イメージが正常にビルドされること |
-| 2 | 通信遮断テスト | `make test` | 3 つのテスト（ホワイトリスト通過、未許可遮断、直接バイパス遮断）が全て PASS すること |
-| 3 | 監査ログの記録 | `make logs` または `cat logs/squid/access.json` | テスト実行時のリクエストが JSON 形式で記録されていること |
-| 4 | 不正アクセスの検出 | `make audit-denied` | 未許可通信が `TCP_DENIED` として抽出表示されること |
-| 5 | テレメトリの無効化 | コンテナ内環境変数確認 | `GOOSE_TELEMETRY_ENABLED=false` が有効であること |
-| 6 | GUI デスクトップ | `http://localhost:6080/vnc.html` | Xfce4 デスクトップおよび Goose Desktop GUI が表示・操作可能であること |
-| 7 | 日本語入力 | デスクトップ内ターミナル | Fcitx5+Mozc により日本語入力・変換ができること |
-| 8 | Web ログ監視 | `http://localhost:8080` | Dozzle により全コンテナのログがリアルタイム閲覧できること |
-| 9 | キルスイッチ | `make block-all` / `make unblock` | ワンコマンドで全通信遮断および復旧ができること |
+| 1 | ホワイトリスト通信許可 | `test-egress.sh` (api.openai.com) | ✅ PASS (200 OK) |
+| 2 | 未許可ドメイン遮断 | `test-egress.sh` (google.com) | ✅ PASS (403 Forbidden) |
+| 3 | プロキシバイパス遮断 | `test-egress.sh` (直接IP/ドメイン宛) | ✅ PASS (Network unreachable) |
+| 4 | パッケージ取得疎通 | `npm ping` / `curl -sI https://pypi.org/simple/` | ✅ PASS (Squid 経由で疎通) |
+| 5 | 言語ランタイム & MCP | `uv`, `uvx`, `pipx`, `npm`, `npx`, `python3` | ✅ PASS (全コマンド正常) |
+| 6 | Git 自動設定 | `git config -l` | ✅ PASS (user.name/email/safe.dir) |
+| 7 | セッション永続化 (tmux) | `tmux new-session -d` / `tmux ls` | ✅ PASS |
+| 8 | GUI デスクトップ & IME | ブラウザで `http://localhost:6080/vnc.html` | ✅ PASS (Xfce4 + Mozc + Goose GUI) |
+| 9 | 成果物アーカイブ | `make export-workspace` | ✅ PASS (tar.gz 出力) |

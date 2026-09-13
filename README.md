@@ -25,28 +25,38 @@ Docker の `internal: true` ネットワーク（L3/L4）と Squid フォワー�
 ```text
 goose-in-the-box/
 ├── docker-compose.yml       # 内部隔離(internal-net)と外部プロキシ(external-net)の定義
-├── Makefile                 # ビルド、テスト、セッション起動、監査集計ワンライナー
+├── Makefile                 # ビルド、テスト、セッション起動、GUI、ログ監視、成果物出力
 ├── README.md                # 本ドキュメント
-├── .env.example             # LLMプロバイダー用APIキーテンプレート
+├── .env.example             # 設定パラメータ・APIキーテンプレート
 ├── squid/
 │   ├── squid.conf           # 厳格なフォワードプロキシ設定 + JSON構造化監査ログ定義
-│   └── whitelist.txt        # 許可ドメイン一覧（OpenAI, Anthropic, Gemini, GitHub等）
+│   └── whitelist.txt        # 許可ドメイン一覧（LLM, GitHub, PyPI, npm等）
 ├── nginx/
 │   └── nginx.conf           # Ingressリバースプロキシ設定 (noVNC WebSocket / ACP中継)
 ├── goose/
-│   └── Dockerfile           # Goose CLI + Xfce4/noVNC/D-Busを導入した隔離コンテナ
+│   └── Dockerfile           # Goose Desktop/CLI + Xfce4/noVNC + Fcitx5 + uv/npm/tmux
 ├── bin/
 │   ├── test-egress.sh       # 通信遮断・プロキシ迂回防止・監査ログの自動検証スクリプト
-│   └── start-goose.sh       # AGENTS.md / ルール自動結合とGoose対話セッション起動
-├── workspace/               # Goose作業ディレクトリ（ホストとマウント）
+│   ├── start-goose.sh       # AGENTS.md / ルール自動結合とGoose対話セッション起動
+│   ├── start-desktop.sh     # Xfce4, VNC, websockify, Fcitx5, Goose Desktop 起動スクリプト
+│   └── audit-tools.sh       # 監査ログ集計・違反検出スクリプト
+├── workspace/               # Goose作業ディレクトリ（ホストとリアルタイム同期）
+│   ├── .goosehints          # Goose公式プロジェクト指示書（日本語、Git、tmux、uv優先）
+│   ├── .gitignore           # ワークスペース標準除外設定（Python, Node, uv, OS一時ファイル）
 │   ├── AGENTS.md            # 作業ルール・セキュリティガイドライン
 │   └── .agents/             # スキルや分割ルールの配置場所
+├── config/                  # Goose 設定ディレクトリ（ホストとマウント永続化）
+│   └── config.yaml          # プロバイダー（Ollama等）および拡張機能設定
+├── data/                    # Goose 内部データの永続化マウント先
+│   ├── sessions/            # 会話セッション履歴 DB (Chat Recall用)
+│   └── logs/                # Goose 内部ログ
 ├── logs/                    # Squid 監査ログ出力先（ホストから閲覧可能）
 │   └── squid/
 │       ├── access.json      # JSON 構造化監査ログ
 │       └── access.log       # テキスト形式ログ
 └── plan/
-    └── implementation_plan.md # 実装計画書 (v3)
+    ├── implementation_plan.md # 実装計画書 (v4: スターター・MCP環境完備)
+    └── memo.md              # 実装仕様・要件メモ
 ```
 
 ## 設定パラメータ (.env)
