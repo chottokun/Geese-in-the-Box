@@ -53,6 +53,15 @@ services:
       egress-proxy:
         condition: service_healthy
 
+  # Dozzle - Lightweight Log Viewer
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
 networks:
   internal-net:
     driver: bridge
