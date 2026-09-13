@@ -36,8 +36,7 @@ users:
   - default
   - name: goose
     shell: /bin/bash
-    sudo: false
-    groups: []
+    sudo: null
 
 write_files:
   # システム全体のプロキシ強制設定
