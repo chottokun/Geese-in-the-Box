@@ -29,13 +29,13 @@ serve: up-proxy
 	docker compose run --rm -p 127.0.0.1:3284:3284 goose-agent goose serve --host 0.0.0.0 --port 3284
 
 # GUI デスクトップ環境の起動 (Xfce4 + noVNC: http://localhost:6080/vnc.html)
-gui: up-proxy
+gui:
 	@echo "=========================================================="
-	@echo " GUI デスクトップコンテナを起動しています..."
+	@echo " GUI デスクトップ環境を起動しています..."
 	@echo " 起動後、ブラウザで以下を開いてください:"
 	@echo " 👉 http://localhost:6080/vnc.html"
 	@echo "=========================================================="
-	docker compose run --rm --name goose-agent goose-agent /bin/start-desktop.sh
+	docker compose up -d
 
 # ==========================================
 # 監査ログ・モニタリング
