@@ -46,6 +46,10 @@ RUN curl -fsSL "https://github.com/block/goose/releases/download/v${GOOSE_VERSIO
          mv /usr/lib/goose/Goose /usr/lib/goose/Goose.real \
          && printf '#!/bin/bash\nexport GTK_IM_MODULE=fcitx\nexport QT_IM_MODULE=fcitx\nexport XMODIFIERS=@im=fcitx\nexec /usr/lib/goose/Goose.real --no-sandbox --enable-features=UseOzonePlatform --ozone-platform=x11 --enable-wayland-ime "$@"\n' > /usr/lib/goose/Goose \
          && chmod +x /usr/lib/goose/Goose; \
+       fi \
+    && if [ -f /usr/lib/goose/resources/bin/goose ]; then \
+         ln -sf /usr/lib/goose/resources/bin/goose /usr/local/bin/goose \
+         && ln -sf /usr/lib/goose/Goose /usr/local/bin/goose-desktop; \
        fi
 
 # 3. 非rootユーザーの作成（UID/GIDはdocker-compose.ymlで上書き可能）
