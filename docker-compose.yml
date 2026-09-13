@@ -32,6 +32,7 @@ services:
       - HTTPS_PROXY=http://egress-proxy:3128
       - http_proxy=http://egress-proxy:3128
       - https_proxy=http://egress-proxy:3128
+      - NO_PROXY=localhost,127.0.0.1
     env_file:
       - .env
     volumes:

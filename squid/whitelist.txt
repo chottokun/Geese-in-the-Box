@@ -1,16 +1,50 @@
+# ============================================
 # ドメインホワイトリスト
+# ============================================
 # サブドメイン全体を許可する場合は先頭にドット（例: .anthropic.com）
 # 1行1ドメインで記述
+# 使用しないプロバイダーのドメインはコメントアウト可能
 
-# AI API プロバイダー
+# --- OpenAI ---
 .openai.com
+
+# --- Anthropic (Claude) ---
 .anthropic.com
 
-# GitHub（コード取得・API利用）
+# --- Google (Gemini) ---
+.googleapis.com
+.google.com
+generativelanguage.googleapis.com
+
+# --- Azure OpenAI ---
+.openai.azure.com
+.cognitiveservices.azure.com
+
+# --- AWS Bedrock ---
+.amazonaws.com
+
+# --- Mistral AI ---
+.mistral.ai
+
+# --- Groq ---
+.groq.com
+
+# --- OpenRouter ---
+.openrouter.ai
+
+# --- Together AI ---
+.together.ai
+.together.xyz
+
+# --- Cohere ---
+.cohere.ai
+.cohere.com
+
+# --- GitHub（コード取得・API利用） ---
 github.com
 api.github.com
 
-# パッケージリポジトリ（必要に応じてコメント解除）
+# --- パッケージリポジトリ（必要に応じてコメント解除） ---
 # pypi.org
 # files.pythonhosted.org
 # registry.npmjs.org
