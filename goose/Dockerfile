@@ -44,7 +44,7 @@ RUN curl -fsSL "https://github.com/block/goose/releases/download/v${GOOSE_VERSIO
     && rm -rf /var/lib/apt/lists/* \
     && if [ -f /usr/lib/goose/Goose ]; then \
          mv /usr/lib/goose/Goose /usr/lib/goose/Goose.real \
-         && printf '#!/bin/bash\nexec /usr/lib/goose/Goose.real --no-sandbox "$@"\n' > /usr/lib/goose/Goose \
+         && printf '#!/bin/bash\nexport GTK_IM_MODULE=fcitx\nexport QT_IM_MODULE=fcitx\nexport XMODIFIERS=@im=fcitx\nexec /usr/lib/goose/Goose.real --no-sandbox --enable-features=UseOzonePlatform --ozone-platform=x11 --enable-wayland-ime "$@"\n' > /usr/lib/goose/Goose \
          && chmod +x /usr/lib/goose/Goose; \
        fi
 
