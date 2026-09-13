@@ -31,8 +31,10 @@ goose-in-the-box/
 ├── squid/
 │   ├── squid.conf           # 厳格なフォワードプロキシ設定 + JSON構造化監査ログ定義
 │   └── whitelist.txt        # 許可ドメイン一覧（OpenAI, Anthropic, Gemini, GitHub等）
+├── nginx/
+│   └── nginx.conf           # Ingressリバースプロキシ設定 (noVNC WebSocket / ACP中継)
 ├── goose/
-│   └── Dockerfile           # Goose CLI + 依存ツールを導入した軽量コンテナ
+│   └── Dockerfile           # Goose CLI + Xfce4/noVNC/D-Busを導入した隔離コンテナ
 ├── bin/
 │   ├── test-egress.sh       # 通信遮断・プロキシ迂回防止・監査ログの自動検証スクリプト
 │   └── start-goose.sh       # AGENTS.md / ルール自動結合とGoose対話セッション起動
