@@ -5,12 +5,19 @@
 workspace/*
 !workspace/.gitkeep
 !workspace/AGENTS.md
+!workspace/.goosehints
+!workspace/.gitignore
 !workspace/.agents/
 !workspace/.agents/**
 
 # Goose設定（ローカル固有）
 config/*
 !config/.gitkeep
+
+# 永続化データ・エクスポート
+data/*
+!data/.gitkeep
+exports/
 
 # Docker・ログ関連
 squid_logs/

@@ -70,6 +70,8 @@ services:
       - QT_IM_MODULE=fcitx
       - XMODIFIERS=@im=fcitx
       - TZ=${TZ:-Asia/Tokyo}
+      - GOOSE_DISABLE_KEYRING=1
+      - CONTEXT_FILE_NAMES=.goosehints,AGENTS.md
     shm_size: '${SHM_SIZE:-1gb}'
     env_file:
       - .env
@@ -81,6 +83,8 @@ services:
       - ./bin/start-goose.sh:/bin/start-goose.sh:ro
       - ./bin/test-egress.sh:/bin/test-egress.sh:ro
       - ./config:/home/sandboxuser/.config/goose:rw
+      - ./data/sessions:/home/sandboxuser/.local/share/goose/sessions:rw
+      - ./data/logs:/home/sandboxuser/.local/state/goose/logs:rw
     working_dir: /workspace
     networks:
       - internal-net

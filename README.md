@@ -163,3 +163,33 @@ make block-all
 # 通信遮断を解除（ホワイトリストを復元して reconfigure）
 make unblock
 ```
+
+---
+
+## 開発スターター環境 & MCP 基盤
+
+本サンドボックスは、AI エージェントが自律的にコーディング・ツール利用（MCP）を行えるよう、ベストプラクティス構成が最初から整えられています：
+
+1. **基本ツール & Git 自動設定**:
+   - `git` は `user.name`（Goose Agent）、`user.email`、`safe.directory`、`defaultBranch` が事前設定済み。
+   - `tmux`（セッション永続化・バックグラウンド管理、マウス有効化）
+   - 基本ユーティリティ: `build-essential`（make, gcc等）、`wget`、`unzip`、`nano`、`less`、`htop`、`tree`
+2. **言語ランタイム & MCP 拡張基盤**:
+   - **Python 3.11** + **`uv` / `uvx`**: 高速パッケージ管理およびオンデマンド MCP サーバー実行。
+   - **`pipx`**: 隔離環境での CLI ツール実行。
+   - **Node.js** + **`npm` / `npx`**: TypeScript/JavaScript 系 MCP サーバー実行基盤。
+3. **公式準拠のプロジェクト指示 (`.goosehints`)**:
+   - `/workspace/.goosehints` に日本語対応、Git コミット指針、ハングアップ防止（常駐サーバーは `tmux` で起動）などのベストプラクティスが定義されています。
+
+---
+
+## 成果物のローカル共有 & エクスポート
+
+1. **ホストマシンとのリアルタイム共有 (バインドマウント)**:
+   - Goose が `/workspace` 配下に作成・編集したコードやファイルは、ホスト側の `./workspace/` にリアルタイムで直接反映されます。手元のエディタ（VS Code, IDE等）で即座に閲覧・編集可能です。
+2. **ワンライナーでの成果物アーカイブ**:
+   - 成果物一式をタイムスタンプ付き tar.gz アーカイブとして書き出したい場合は、以下のコマンドを実行します：
+     ```bash
+     make export-workspace
+     ```
+     `exports/workspace_YYYYMMDD_HHMMSS.tar.gz` にアーカイブが出力されます。

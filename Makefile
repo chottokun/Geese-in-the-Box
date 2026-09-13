@@ -1,4 +1,4 @@
-.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary clean help
+.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
@@ -83,6 +83,13 @@ unblock:
 	else \
 		echo "バックアップファイル (squid/.whitelist.txt.bak) が見つかりません"; \
 	fi
+
+# ワークスペース成果物のアーカイブ出力
+export-workspace:
+	@mkdir -p ./exports
+	@FILENAME="exports/workspace_$$(date +%Y%m%d_%H%M%S).tar.gz"; \
+	tar -czf "$$FILENAME" -C ./workspace . && \
+	echo "成果物をアーカイブしました: $$FILENAME"
 
 # クリーンアップ
 clean:
