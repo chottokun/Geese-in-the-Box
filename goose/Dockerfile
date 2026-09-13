@@ -2,6 +2,7 @@
 FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
 # 基本ツール + GUI/noVNC 関連パッケージのインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \

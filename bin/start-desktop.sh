@@ -9,6 +9,8 @@ echo "=== Goose Desktop 隔離 GUI 環境を起動中 ==="
 # 画面解像度の設定
 RESOLUTION="${RESOLUTION:-1280x800x24}"
 export DISPLAY=:1
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
 
 # 終了ハンドラ
 cleanup() {

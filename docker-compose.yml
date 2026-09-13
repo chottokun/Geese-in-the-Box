@@ -60,6 +60,8 @@ services:
       - NO_PROXY=localhost,127.0.0.1
       - GOOSE_TELEMETRY_ENABLED=${GOOSE_TELEMETRY_ENABLED:-false}
       - RESOLUTION=${RESOLUTION:-1280x800x24}
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
     env_file:
       - .env
     command: /bin/start-desktop.sh
@@ -67,6 +69,7 @@ services:
       - ./workspace:/workspace:rw
       - ./bin:/bin/host-scripts:ro
       - ./bin/start-desktop.sh:/bin/start-desktop.sh:ro
+      - ./bin/start-goose.sh:/bin/start-goose.sh:ro
       - ./bin/test-egress.sh:/bin/test-egress.sh:ro
       - ./config:/home/sandboxuser/.config/goose:rw
     working_dir: /workspace
