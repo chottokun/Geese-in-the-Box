@@ -35,13 +35,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fcitx5-frontend-qt5 \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. 公式 Goose Desktop GUI (.deb) のインストール
+# 2. 公式 Goose Desktop GUI (.deb) のインストール + --no-sandbox ラッパーの設置
 ARG GOOSE_VERSION=1.50.0
 RUN curl -fsSL "https://github.com/block/goose/releases/download/v${GOOSE_VERSION}/goose_${GOOSE_VERSION}_amd64.deb" -o /tmp/goose.deb \
     && apt-get update \
     && apt-get install -y --no-install-recommends /tmp/goose.deb \
     && rm -f /tmp/goose.deb \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && if [ -f /usr/lib/goose/Goose ]; then \
+         mv /usr/lib/goose/Goose /usr/lib/goose/Goose.real \
+         && printf '#!/bin/bash\nexec /usr/lib/goose/Goose.real --no-sandbox "$@"\n' > /usr/lib/goose/Goose \
+         && chmod +x /usr/lib/goose/Goose; \
+       fi
 
 # 3. 非rootユーザーの作成（UID/GIDはdocker-compose.ymlで上書き可能）
 RUN groupadd -g 1000 sandboxuser \
