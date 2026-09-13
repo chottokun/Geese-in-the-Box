@@ -19,16 +19,18 @@ RUN groupadd -g 1000 sandboxuser \
     && mkdir -p /home/sandboxuser/.config/goose /workspace \
     && chown -R sandboxuser:sandboxuser /home/sandboxuser /workspace
 
-# Goose CLI のインストール（rootで実行し、全ユーザーで利用可能にする）
-RUN curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash \
-    && cp -r /root/.local/bin/goose /usr/local/bin/ 2>/dev/null || true
+# Goose CLI のインストール（対話的設定をスキップし、システム全体パスへ直接導入）
+RUN curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh -o /tmp/download_cli.sh \
+    && CONFIGURE=false GOOSE_BIN_DIR=/usr/local/bin bash /tmp/download_cli.sh \
+    && rm /tmp/download_cli.sh
 
-# テストスクリプトのコピー
+# 実行スクリプトのコピー
 COPY bin/test-egress.sh /bin/test-egress.sh
-RUN chmod +x /bin/test-egress.sh
+COPY bin/start-goose.sh /bin/start-goose.sh
+RUN chmod +x /bin/test-egress.sh /bin/start-goose.sh
 
 # 非rootユーザーに切り替え
 USER sandboxuser
 WORKDIR /workspace
 
-ENTRYPOINT ["/bin/bash"]
+CMD ["/bin/bash"]

@@ -4,16 +4,18 @@ services:
   egress-proxy:
     image: ubuntu/squid:latest
     container_name: egress-proxy
-    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3128:3128" # 監査用フォワードプロキシ
+      - "127.0.0.1:3284:3284" # Goose Desktop用リバースプロキシ
     volumes:
       - ./squid/squid.conf:/etc/squid/squid.conf:ro
       - ./squid/whitelist.txt:/etc/squid/whitelist.txt:ro
-      - squid_logs:/var/log/squid
+      - ./logs/squid:/var/log/squid
     networks:
       - internal-net
       - external-net
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 3128 || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/3128' || exit 1"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -33,6 +35,7 @@ services:
       - http_proxy=http://egress-proxy:3128
       - https_proxy=http://egress-proxy:3128
       - NO_PROXY=localhost,127.0.0.1
+      - GOOSE_TELEMETRY_ENABLED=${GOOSE_TELEMETRY_ENABLED:-false}
     env_file:
       - .env
     volumes:
@@ -53,6 +56,3 @@ networks:
 
   external-net:
     driver: bridge  # プロキシのみが外部と通信可能
-
-volumes:
-  squid_logs:

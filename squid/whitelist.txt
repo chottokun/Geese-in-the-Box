@@ -13,8 +13,6 @@
 
 # --- Google (Gemini) ---
 .googleapis.com
-.google.com
-generativelanguage.googleapis.com
 
 # --- Azure OpenAI ---
 .openai.azure.com
