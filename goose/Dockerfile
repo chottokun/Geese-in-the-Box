@@ -4,7 +4,7 @@ FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-# 基本ツール + GUI/noVNC 関連パッケージのインストール
+# 1. 基本ツール + GUI/noVNC + 日本語入力 (Fcitx5+Mozc) のインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     jq \
     ripgrep \
+    zenity \
     # GUI デスクトップ環境 (Xfce4 + Xvfb + D-Bus)
     xvfb \
     xfce4 \
@@ -23,23 +24,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     x11vnc \
     novnc \
     websockify \
-    # フォント
+    # 日本語フォント
     fonts-noto-cjk \
     fonts-noto-color-emoji \
+    # 日本語入力システム (Fcitx5 + Mozc)
+    fcitx5 \
+    fcitx5-mozc \
+    fcitx5-frontend-gtk2 \
+    fcitx5-frontend-gtk3 \
+    fcitx5-frontend-qt5 \
     && rm -rf /var/lib/apt/lists/*
 
-# 非rootユーザーの作成（UID/GIDはdocker-compose.ymlで上書き可能）
+# 2. 公式 Goose Desktop GUI (.deb) のインストール
+ARG GOOSE_VERSION=1.50.0
+RUN curl -fsSL "https://github.com/block/goose/releases/download/v${GOOSE_VERSION}/goose_${GOOSE_VERSION}_amd64.deb" -o /tmp/goose.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends /tmp/goose.deb \
+    && rm -f /tmp/goose.deb \
+    && rm -rf /var/lib/apt/lists/*
+
+# 3. 非rootユーザーの作成（UID/GIDはdocker-compose.ymlで上書き可能）
 RUN groupadd -g 1000 sandboxuser \
     && useradd -m -u 1000 -g sandboxuser -s /bin/bash sandboxuser \
-    && mkdir -p /home/sandboxuser/.config/goose /workspace \
+    && mkdir -p /home/sandboxuser/.config/goose /home/sandboxuser/Desktop /home/sandboxuser/.config/fcitx5 /workspace \
     && chown -R sandboxuser:sandboxuser /home/sandboxuser /workspace
 
-# Goose CLI のインストール（対話的設定をスキップし、システム全体パスへ直接導入）
-RUN curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh -o /tmp/download_cli.sh \
-    && CONFIGURE=false GOOSE_BIN_DIR=/usr/local/bin bash /tmp/download_cli.sh \
-    && rm /tmp/download_cli.sh
+# 4. デスクトップアイコンと Fcitx5 初期プロファイル設定 (Mozc有効化)
+RUN if [ -f /usr/share/applications/goose.desktop ]; then \
+        cp /usr/share/applications/goose.desktop /home/sandboxuser/Desktop/; \
+        sed -i 's|Exec=/usr/lib/goose/Goose %U|Exec=/usr/lib/goose/Goose --no-sandbox %U|g' /home/sandboxuser/Desktop/goose.desktop; \
+        chmod +x /home/sandboxuser/Desktop/goose.desktop; \
+    fi \
+    && printf "[Groups/0]\nName=Default\nDefault Layout=jp\nDefaultIM=mozc\n\n[Groups/0/Items/0]\nName=keyboard-jp\nLayout=\n\n[Groups/0/Items/1]\nName=mozc\nLayout=\n\n[GroupOrder]\n0=Default\n" > /home/sandboxuser/.config/fcitx5/profile \
+    && chown -R sandboxuser:sandboxuser /home/sandboxuser/.config /home/sandboxuser/Desktop
 
-# 実行スクリプトのコピー
+# 5. 実行スクリプトのコピー
 COPY bin/test-egress.sh /bin/test-egress.sh
 COPY bin/start-goose.sh /bin/start-goose.sh
 COPY bin/start-desktop.sh /bin/start-desktop.sh

@@ -62,6 +62,10 @@ services:
       - RESOLUTION=${RESOLUTION:-1280x800x24}
       - LANG=C.UTF-8
       - LC_ALL=C.UTF-8
+      - GTK_IM_MODULE=fcitx
+      - QT_IM_MODULE=fcitx
+      - XMODIFIERS=@im=fcitx
+    shm_size: '1gb'
     env_file:
       - .env
     command: /bin/start-desktop.sh
