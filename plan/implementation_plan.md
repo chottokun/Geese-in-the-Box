@@ -131,6 +131,21 @@ goose-in-the-box/
   - `make audit-denied`: 遮断された通信のみを抽出表示。
   - `make audit-summary`: アクセス頻度トップ10ドメインを集計。
 
+### タスク 5: GUI デスクトップ & Ingress プロキシ分離（完了）
+- `nginx/nginx.conf`:
+  - ホストからの noVNC Web UI / WebSocket (6080) および ACP (3284) を内部の `goose-agent` へ転送。
+- `docker-compose.yml`:
+  - `ingress-proxy` (Nginx), `egress-proxy` (Squid), `goose-agent` (隔離) の3層分離アーキテクチャ。
+- `goose/Dockerfile` & `bin/start-desktop.sh`:
+  - Xfce4 デスクトップ、Xvfb、noVNC、x11vnc、公式 Goose Desktop GUI (`.deb`)、Fcitx5 + Mozc 日本語入力を導入。
+
+### タスク 6: 各種パラメータの .env 一元化 & 運用監視強化（完了）
+- `.env` / `.env.example`:
+  - ポート（`NOVNC_PORT`, `GOOSE_SERVE_PORT`, `SQUID_PORT`, `DOZZLE_PORT`）
+  - 画面解像度（`RESOLUTION`）、タイムゾーン（`TZ=Asia/Tokyo`）、共有メモリ（`SHM_SIZE`）、UID/GID を一元設定可能に。
+- Dozzle (Web ログビューワー: `http://localhost:8080`) の導入（PR #1 マージ）。
+- ホワイトリスト動的リロード（`make reload`）および完全キルスイッチ（`make block-all` / `make unblock`）の導入。
+
 ---
 
 ## 4. 実動テスト手順と受入基準
@@ -140,5 +155,9 @@ goose-in-the-box/
 | 1 | イメージビルド | `make build` | Docker イメージが正常にビルドされること |
 | 2 | 通信遮断テスト | `make test` | 3 つのテスト（ホワイトリスト通過、未許可遮断、直接バイパス遮断）が全て PASS すること |
 | 3 | 監査ログの記録 | `make logs` または `cat logs/squid/access.json` | テスト実行時のリクエストが JSON 形式で記録されていること |
-| 4 | 不正アクセスの検出 | `make audit-denied` | `www.google.com` への通信が `TCP_DENIED` として抽出表示されること |
+| 4 | 不正アクセスの検出 | `make audit-denied` | 未許可通信が `TCP_DENIED` として抽出表示されること |
 | 5 | テレメトリの無効化 | コンテナ内環境変数確認 | `GOOSE_TELEMETRY_ENABLED=false` が有効であること |
+| 6 | GUI デスクトップ | `http://localhost:6080/vnc.html` | Xfce4 デスクトップおよび Goose Desktop GUI が表示・操作可能であること |
+| 7 | 日本語入力 | デスクトップ内ターミナル | Fcitx5+Mozc により日本語入力・変換ができること |
+| 8 | Web ログ監視 | `http://localhost:8080` | Dozzle により全コンテナのログがリアルタイム閲覧できること |
+| 9 | キルスイッチ | `make block-all` / `make unblock` | ワンコマンドで全通信遮断および復旧ができること |
