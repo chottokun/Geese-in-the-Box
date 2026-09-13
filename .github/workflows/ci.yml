@@ -1,0 +1,25 @@
+name: CI Sandbox Egress Test
+
+on:
+  pull_request:
+    paths:
+      - 'squid/**'
+      - 'goose/**'
+      - 'docker-compose.yml'
+      - 'bin/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 環境セットアップ
+        run: |
+          touch .env
+          mkdir -p workspace config
+
+      - name: 通信遮断テストの実行
+        run: |
+          make build
+          make test

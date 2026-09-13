@@ -1,0 +1,16 @@
+# ドメインホワイトリスト
+# サブドメイン全体を許可する場合は先頭にドット（例: .anthropic.com）
+# 1行1ドメインで記述
+
+# AI API プロバイダー
+.openai.com
+.anthropic.com
+
+# GitHub（コード取得・API利用）
+github.com
+api.github.com
+
+# パッケージリポジトリ（必要に応じてコメント解除）
+# pypi.org
+# files.pythonhosted.org
+# registry.npmjs.org

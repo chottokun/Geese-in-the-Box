@@ -1,0 +1,24 @@
+# 環境変数（APIキーを含むため必ず除外）
+.env
+
+# ワークスペース内の生成物
+workspace/*
+!workspace/.gitkeep
+
+# Goose設定（ローカル固有）
+config/*
+!config/.gitkeep
+
+# Docker関連
+squid_logs/
+
+# OS固有
+.DS_Store
+Thumbs.db
+
+# エディタ固有
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

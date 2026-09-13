@@ -1,0 +1,57 @@
+# docker-compose.yml
+services:
+  # Egress Control Proxy
+  egress-proxy:
+    image: ubuntu/squid:latest
+    container_name: egress-proxy
+    restart: unless-stopped
+    volumes:
+      - ./squid/squid.conf:/etc/squid/squid.conf:ro
+      - ./squid/whitelist.txt:/etc/squid/whitelist.txt:ro
+      - squid_logs:/var/log/squid
+    networks:
+      - internal-net
+      - external-net
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 3128 || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  # Goose Agent Container
+  goose-agent:
+    build:
+      context: .
+      dockerfile: goose/Dockerfile
+    container_name: goose-agent
+    stdin_open: true
+    tty: true
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      - HTTP_PROXY=http://egress-proxy:3128
+      - HTTPS_PROXY=http://egress-proxy:3128
+      - http_proxy=http://egress-proxy:3128
+      - https_proxy=http://egress-proxy:3128
+    env_file:
+      - .env
+    volumes:
+      - ./workspace:/workspace:rw
+      - ./bin:/bin/host-scripts:ro
+      - ./config:/home/sandboxuser/.config/goose:rw
+    working_dir: /workspace
+    networks:
+      - internal-net
+    depends_on:
+      egress-proxy:
+        condition: service_healthy
+
+networks:
+  internal-net:
+    driver: bridge
+    internal: true  # カーネルレベルで外部への直接ルーティングを遮断
+
+  external-net:
+    driver: bridge  # プロキシのみが外部と通信可能
+
+volumes:
+  squid_logs:
