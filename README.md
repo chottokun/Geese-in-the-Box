@@ -49,6 +49,23 @@ goose-in-the-box/
     └── implementation_plan.md # 実装計画書 (v3)
 ```
 
+## 設定パラメータ (.env)
+
+環境設定はすべて `.env` ファイルで一元管理できます（`.env.example` を参考に設定）。
+
+| パラメータ | 説明 | デフォルト値 |
+| :--- | :--- | :--- |
+| **`OPENAI_API_KEY` 等** | 各種 LLM プロバイダーの API キー | （空欄） |
+| **`OLLAMA_HOST`** | ローカル LLM ホスト接続先 | `http://host.docker.internal:11434` |
+| **`NOVNC_PORT`** | noVNC Web UI ポート（ブラウザ接続先） | `6080` |
+| **`GOOSE_SERVE_PORT`** | Goose ACP サーバー公開ポート | `3284` |
+| **`SQUID_PORT`** | Squid 監査プロキシポート | `3128` |
+| **`RESOLUTION`** | 仮想デスクトップ解像度 | `1280x800x24` |
+| **`TZ`** | タイムゾーン（時計・ログ出力時刻） | `Asia/Tokyo` |
+| **`SHM_SIZE`** | 共有メモリサイズ（GUI安定化用） | `1gb` |
+| **`UID` / `GID`** | コンテナ内実行ユーザー権限 | `1000` / `1000` |
+| **`GOOSE_TELEMETRY_ENABLED`** | 匿名の利用実績データ送信制御 | `false` |
+
 ---
 
 ## クイックスタート
@@ -56,7 +73,7 @@ goose-in-the-box/
 ### 1. 初期設定
 ```bash
 cp .env.example .env
-# .env に使用する LLM プロバイダーの API キーを設定（例: OPENAI_API_KEY など）
+# .env を開いて必要な API キーや設定を調整
 ```
 
 ### 2. コンテナイメージのビルド
