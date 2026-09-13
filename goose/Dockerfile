@@ -12,10 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     jq \
     ripgrep \
-    # GUI デスクトップ環境 (Xfce4 + Xvfb)
+    # GUI デスクトップ環境 (Xfce4 + Xvfb + D-Bus)
     xvfb \
     xfce4 \
     xfce4-terminal \
+    dbus-x11 \
+    dbus \
     # VNC & Webブラウザ接続 (noVNC)
     x11vnc \
     novnc \

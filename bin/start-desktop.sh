@@ -24,9 +24,9 @@ Xvfb :1 -screen 0 "$RESOLUTION" &
 XVFB_PID=$!
 sleep 1
 
-# 2. 軽量デスクトップ環境 (Xfce4) の起動
+# 2. 軽量デスクトップ環境 (Xfce4 + D-Bus セッション) の起動
 echo "2. Xfce4 デスクトップ環境を起動..."
-startxfce4 &
+dbus-run-session startxfce4 &
 sleep 2
 
 # 3. VNC サーバー (x11vnc) の起動 (パスワードなしローカル接続)
