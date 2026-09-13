@@ -38,6 +38,9 @@
 .cohere.ai
 .cohere.com
 
+# --- ローカル LLM (Ollama 等) ---
+host.docker.internal
+
 # --- GitHub（コード取得・API利用） ---
 github.com
 api.github.com
