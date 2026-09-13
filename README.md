@@ -60,6 +60,7 @@ goose-in-the-box/
 | **`NOVNC_PORT`** | noVNC Web UI ポート（ブラウザ接続先） | `6080` |
 | **`GOOSE_SERVE_PORT`** | Goose ACP サーバー公開ポート | `3284` |
 | **`SQUID_PORT`** | Squid 監査プロキシポート | `3128` |
+| **`DOZZLE_PORT`** | Dozzle Web リアルタイムログ監視ポート | `8080` |
 | **`RESOLUTION`** | 仮想デスクトップ解像度 | `1280x800x24` |
 | **`TZ`** | タイムゾーン（時計・ログ出力時刻） | `Asia/Tokyo` |
 | **`SHM_SIZE`** | 共有メモリサイズ（GUI安定化用） | `1gb` |
