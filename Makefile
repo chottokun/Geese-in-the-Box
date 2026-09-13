@@ -10,7 +10,7 @@ build:
 
 # プロキシコンテナの起動（バックグラウンド）
 up-proxy:
-	docker compose up -d egress-proxy
+	docker compose up -d egress-proxy ingress-proxy
 
 # 全コンテナの停止
 down:
@@ -34,9 +34,8 @@ gui: up-proxy
 	@echo " GUI デスクトップコンテナを起動しています..."
 	@echo " 起動後、ブラウザで以下を開いてください:"
 	@echo " 👉 http://localhost:6080/vnc.html"
-	@echo " (または VNC クライアントで localhost:5900 に接続)"
 	@echo "=========================================================="
-	docker compose run --rm -p 127.0.0.1:6080:6080 -p 127.0.0.1:5900:5900 goose-agent /bin/start-desktop.sh
+	docker compose run --rm --name goose-agent goose-agent /bin/start-desktop.sh
 
 # ==========================================
 # 監査ログ・モニタリング
