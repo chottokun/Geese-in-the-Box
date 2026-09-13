@@ -1,4 +1,4 @@
-.PHONY: build up-proxy down test session serve gui logs audit-denied audit-summary clean help
+.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary clean help
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
@@ -56,6 +56,33 @@ audit-summary:
 # 不正・拒否通信サマリー
 audit-violations:
 	@./bin/audit-tools.sh violations
+
+# ==========================================
+# 宛先ドメイン制御 & キルスイッチ
+# ==========================================
+
+# ホワイトリストの設定再読み込み（動的反映）
+reload:
+	docker compose exec egress-proxy squid -k reconfigure
+
+# 完全キルスイッチ（全拒否 ACL に切り替えて reconfigure）
+block-all:
+	@if [ ! -f squid/.whitelist.txt.bak ]; then \
+		cp squid/whitelist.txt squid/.whitelist.txt.bak; \
+	fi
+	@echo "# ALL BLOCKED" > squid/whitelist.txt
+	@echo "全通信を緊急遮断しました (block-all)"
+	@$(MAKE) reload
+
+# キルスイッチ解除（ホワイトリストを復元して reconfigure）
+unblock:
+	@if [ -f squid/.whitelist.txt.bak ]; then \
+		mv squid/.whitelist.txt.bak squid/whitelist.txt; \
+		echo "通信遮断を解除しました (unblock)"; \
+		$(MAKE) reload; \
+	else \
+		echo "バックアップファイル (squid/.whitelist.txt.bak) が見つかりません"; \
+	fi
 
 # クリーンアップ
 clean:

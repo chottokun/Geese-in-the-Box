@@ -120,7 +120,12 @@ make gui
 
 ## 通信ログの監査・分析
 
-### リアルタイム監査ログの閲覧
+### Dozzle によるリアルタイムWebログ監視
+Dozzle が `docker-compose.yml` に定義されており、ブラウザからコンテナのログをリアルタイムに確認・検索・フィルタリングできます：
+* **http://localhost:8080** にアクセス
+* `egress-proxy` コンテナを選択することで、Squid のアクセスログ（`TCP_TUNNEL/200` や `TCP_DENIED/403` など）を色分け・フィルタ監視可能です。
+
+### CLI でのリアルタイム監査ログの閲覧
 ```bash
 make logs
 ```
@@ -138,9 +143,22 @@ make audit-summary
 
 ---
 
-## ドメインホワイトリストの編集
-許可するドメインを追加・変更したい場合は、`squid/whitelist.txt` を編集後、プロキシコンテナを再起動します：
+## ドメインホワイトリストの動的制御 & 完全キルスイッチ
+
+### ドメインの動的オン/オフ (リロード)
+許可するドメインを追加・変更したい場合は、ホスト側の `squid/whitelist.txt` を編集後、以下のコマンドで Squid の設定を即時反映します：
 ```bash
-# squid/whitelist.txt を編集
-docker compose restart egress-proxy
+# squid/whitelist.txt を編集後に実行
+make reload
+```
+*(通信を切断・再接続することなく即時にホワイトリスト変更が適用されます)*
+
+### 完全キルスイッチ（一括オン/オフ）
+緊急時などに CLI から全通信を瞬時にシャットダウン・復元できます：
+```bash
+# 全通信を緊急遮断（ホワイトリストを空にして reconfigure）
+make block-all
+
+# 通信遮断を解除（ホワイトリストを復元して reconfigure）
+make unblock
 ```
