@@ -1,15 +1,38 @@
 name: CI Sandbox Egress Test
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     paths:
       - 'squid/**'
       - 'goose/**'
       - 'docker-compose.yml'
       - 'bin/**'
+      - 'Makefile'
 
 jobs:
-  test:
+  lint-and-syntax:
+    name: 静的解析 & 構文チェック
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 依存パッケージのインストール (Squid, ShellCheck)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squid shellcheck
+
+      - name: 1. Squid 設定ファイルの構文検証
+        run: |
+          sudo squid -k parse -f squid/squid.conf
+
+      - name: 2. シェルスクリプトの静的解析 (ShellCheck)
+        run: |
+          shellcheck bin/*.sh
+
+  egress-integration-test:
+    name: 通信完全遮断 実動テスト
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,9 +40,19 @@ jobs:
       - name: 環境セットアップ
         run: |
           touch .env
-          mkdir -p workspace config
+          mkdir -p workspace config logs/squid
+          chmod -R 777 logs/squid
 
-      - name: 通信遮断テストの実行
+      - name: コンテナのビルド
         run: |
           make build
+
+      - name: 通信遮断テストの実行 (L3/L4 内部隔離 & L7 プロキシ判定)
+        run: |
           make test
+
+      - name: 監査集計機能の検証
+        run: |
+          make audit-denied
+          make audit-summary
+          make audit-violations

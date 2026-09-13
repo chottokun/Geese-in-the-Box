@@ -6,7 +6,7 @@ set -euo pipefail
 # ==========================================
 # AGENTS.md / CLAUDE.md のルールを自動読み込みして Goose CLI セッションを開始する。
 
-WORKSPACE="${GOOSE_WORKSPACE:-/home/goose/workspace}"
+WORKSPACE="${GOOSE_WORKSPACE:-/workspace}"
 cd "$WORKSPACE"
 
 SYSTEM_CONTENT=""

@@ -1,92 +1,63 @@
-.PHONY: vm-create vm-start vm-stop vm-destroy vm-shell vm-gui test logs audit-denied audit-summary monitor session serve
+.PHONY: build up-proxy down test session serve gui logs audit-denied audit-summary clean help
 
 # ==========================================
-# VM ライフサイクル管理
+# Goose-in-the-Box (Docker 隔離 & 通信制御)
 # ==========================================
 
-# VM の作成・プロビジョニング（初回のみ）
-vm-create:
-	multipass launch --name goose-box --cloud-init vm/cloud-init.yaml --cpus 2 --memory 4G --disk 20G
-	@echo ""
-	@echo "=== VM 作成完了 ==="
-	@echo "cloud-init のプロビジョニングが完了するまで数分かかります。"
-	@echo "進捗確認: multipass exec goose-box -- tail -f /var/log/cloud-init-output.log"
+# コンテナイメージのビルド
+build:
+	docker compose build
 
-# VM の起動
-vm-start:
-	multipass start goose-box
+# プロキシコンテナの起動（バックグラウンド）
+up-proxy:
+	docker compose up -d egress-proxy
 
-# VM の停止
-vm-stop:
-	multipass stop goose-box
+# 全コンテナの停止
+down:
+	docker compose down
 
-# VM の完全破棄（クリーンな初期状態に復元）
-vm-destroy:
-	multipass delete goose-box && multipass purge
+# 通信遮断テストの実行 (L3/L4 内部隔離 & L7 Squid 制御)
+test: up-proxy
+	docker compose run --rm goose-agent /bin/test-egress.sh
 
-# VM へのシェルアクセス
-vm-shell:
-	multipass shell goose-box
+# Goose CLI 対話セッションの起動 (AGENTS.md / ルール自動読み込み)
+session: up-proxy
+	docker compose run --rm goose-agent /bin/start-goose.sh
 
-# ==========================================
-# GUI デスクトップ接続
-# ==========================================
+# Goose Desktop 向け ACP サーバー起動 (ポート 3284)
+serve: up-proxy
+	docker compose run --rm -p 127.0.0.1:3284:3284 goose-agent goose serve --host 0.0.0.0 --port 3284
 
-# GUI 接続情報の表示
-vm-gui:
-	@echo "=== GUI デスクトップ接続情報 ==="
-	@echo "VM IP: $$(multipass info goose-box | grep IPv4 | awk '{print $$2}')"
-	@echo ""
-	@echo "RDP 接続: rdesktop $$(multipass info goose-box | grep IPv4 | awk '{print $$2}')"
-	@echo "  または: xfreerdp /v:$$(multipass info goose-box | grep IPv4 | awk '{print $$2}')"
+# GUI デスクトップ環境の起動 (Xfce4 + noVNC: http://localhost:6080/vnc.html)
+gui: up-proxy
+	@echo "=========================================================="
+	@echo " GUI デスクトップコンテナを起動しています..."
+	@echo " 起動後、ブラウザで以下を開いてください:"
+	@echo " 👉 http://localhost:6080/vnc.html"
+	@echo " (または VNC クライアントで localhost:5900 に接続)"
+	@echo "=========================================================="
+	docker compose run --rm -p 127.0.0.1:6080:6080 -p 127.0.0.1:5900:5900 goose-agent /bin/start-desktop.sh
 
 # ==========================================
-# Goose セッション管理
+# 監査ログ・モニタリング
 # ==========================================
 
-# ワークスペースをVMに転送して Goose CLI セッションを開始
-session:
-	multipass transfer workspace/ goose-box:/home/goose/workspace/ 2>/dev/null || true
-	multipass exec goose-box -- sudo -u goose /opt/goose-box/bin/start-goose.sh
-
-# Goose ACP サーバーを起動（Goose Desktop 連携用）
-serve:
-	multipass transfer workspace/ goose-box:/home/goose/workspace/ 2>/dev/null || true
-	multipass exec goose-box -- sudo -u goose goose serve --host 0.0.0.0 --port 3284
-
-# ==========================================
-# 通信遮断テスト
-# ==========================================
-
-# 通信遮断テストの実行
-test:
-	multipass exec goose-box -- /opt/goose-box/bin/test-egress.sh
-
-# ==========================================
-# 監査ログ・ダッシュボード
-# ==========================================
-
-# プロキシの JSON 監査ログをリアルタイム表示
+# JSON 構造化監査ログのリアルタイム表示
 logs:
-	multipass exec goose-box -- tail -f /var/log/squid/access.json
+	docker compose exec egress-proxy tail -f /var/log/squid/access.json
 
-# 遮断された通信のみを一覧表示
+# 遮断された通信 (DENIED) のみ一覧表示
 audit-denied:
-	multipass exec goose-box -- bash -c "cat /var/log/squid/access.json | jq -r 'select(.squid_status | test(\"DENIED\")) | [.time, .method, .domain, .url] | @tsv'"
+	@docker compose exec -T egress-proxy cat /var/log/squid/access.json 2>/dev/null | jq -r 'select(.squid_status | test("DENIED")) | [.time, .client, .method, .domain, .url] | @tsv' || echo "ログがまだありません"
 
-# ドメイン別アクセス頻度トップ10
+# 宛先ドメイン別アクセス集計トップ10
 audit-summary:
-	multipass exec goose-box -- bash -c "cat /var/log/squid/access.json | jq -r '.domain' | sort | uniq -c | sort -rn | head -10"
+	@./bin/audit-tools.sh domains
 
-# 監査ダッシュボードの URL を表示
-monitor:
-	@echo "=== 監査ダッシュボード ==="
-	@echo "ブラウザで http://$$(multipass info goose-box | grep IPv4 | awk '{print $$2}'):7890 を開いてください"
+# 不正・拒否通信サマリー
+audit-violations:
+	@./bin/audit-tools.sh violations
 
-# ==========================================
 # クリーンアップ
-# ==========================================
-
-# ワークスペースのクリーンアップ
 clean:
 	git clean -fdX workspace/

@@ -1,74 +1,127 @@
-# Goose Egress Sandbox Package
+# Goose-in-the-Box: AI エージェント完全通信制御＆監査サンドボックス
 
-AIエージェント「Goose」を隔離環境で安全に実行するためのDockerサンドボックスパッケージです。
-SquidフォワードプロキシとDockerの `internal: true` ネットワークを組み合わせ、許可したドメイン以外への通信をカーネル/プロキシの2段構えで遮断します。
-また、Gooseの匿名利用データ（テレメトリ）送信もデフォルトで無効化（`GOOSE_TELEMETRY_ENABLED=false`）されています。
+AIエージェント「Goose」を安全に実行するための、Dockerベースの通信完全隔離・監査サンドボックスです。
 
-## 含まれるファイル構成
+Docker の `internal: true` ネットワーク（L3/L4）と Squid フォワードプロキシ（L7）の **2段構え** により、エージェントによる勝手な外部通信やデータ流出を 100% 遮断し、全通信試行を構造化 JSON ログに記録・監査します。また、Goose 本体の匿名テレメトリ送信もデフォルトで無効化されています。
+
+---
+
+## 主な特徴
+
+- 🔒 **プロキシバイパスの完全排除 (L3/L4 隔離)**:
+  - エージェントコンテナは `internal: true` ネットワーク内に配置され、外部へのデフォルトゲートウェイが存在しません。
+  - プロキシ設定を無視した直接通信（IP直撃やDNS漏洩）を試みても、Linux カーネルが即座にパケットを破棄します。
+- 🛡️ **厳格なホワイトリスト制御 (L7 制御)**:
+  - 外部と通信可能な唯一の出口である Squid プロキシが、`whitelist.txt` に登録されたドメイン宛てのみ通過を許可します。未許可ドメインは `403 Forbidden` で即座に遮断されます。
+- 📊 **JSON 構造化監査ログ**:
+  - 全通信（許可・遮断・HTTPステータス・ドメイン・送受信量）を ISO8601 タイムスタンプ付きの JSON 形式で `/var/log/squid/access.json` に記録。CLI で即座にフィルタリング・集計が可能です。
+- 🚫 **テレメトリ強制遮断**:
+  - `GOOSE_TELEMETRY_ENABLED=false` が適用され、エージェント自体の利用データ送信を抑止します。
+
+---
+
+## ファイル構成
 
 ```text
-goose-egress-sandbox/
-├── docker-compose.yml       # 内部・外部隔離ネットワークおよびコンテナ構成
-├── .env.example             # APIキー設定テンプレート
+goose-in-the-box/
+├── docker-compose.yml       # 内部隔離(internal-net)と外部プロキシ(external-net)の定義
+├── Makefile                 # ビルド、テスト、セッション起動、監査集計ワンライナー
+├── README.md                # 本ドキュメント
+├── .env.example             # LLMプロバイダー用APIキーテンプレート
 ├── squid/
-│   └── squid.conf           # ドメインホワイトリスト設定
+│   ├── squid.conf           # 厳格なフォワードプロキシ設定 + JSON構造化監査ログ定義
+│   └── whitelist.txt        # 許可ドメイン一覧（OpenAI, Anthropic, Gemini, GitHub等）
 ├── goose/
-│   └── Dockerfile           # Goose CLI + 依存ツール導入
+│   └── Dockerfile           # Goose CLI + 依存ツールを導入した軽量コンテナ
 ├── bin/
-│   ├── test-egress.sh       # 通信遮断検証スクリプト
-│   └── start-goose.sh       # AGENTS.md/CLAUDE.mdを読み込んでGooseを起動
-└── workspace/               # Goose作業用ディレクトリ（ホストとバインドマウント）
-    ├── AGENTS.md            # プロジェクト固有の作業ルール・指示
-    ├── .agents/skills/      # プロジェクト固有のスキル定義
-    └── .agents/rules/       # 分割ルール定義（任意: .md ファイルを自動結合）
+│   ├── test-egress.sh       # 通信遮断・プロキシ迂回防止・監査ログの自動検証スクリプト
+│   └── start-goose.sh       # AGENTS.md / ルール自動結合とGoose対話セッション起動
+├── workspace/               # Goose作業ディレクトリ（ホストとマウント）
+│   ├── AGENTS.md            # 作業ルール・セキュリティガイドライン
+│   └── .agents/             # スキルや分割ルールの配置場所
+├── logs/                    # Squid 監査ログ出力先（ホストから閲覧可能）
+│   └── squid/
+│       ├── access.json      # JSON 構造化監査ログ
+│       └── access.log       # テキスト形式ログ
+└── plan/
+    └── implementation_plan.md # 実装計画書 (v3)
 ```
+
+---
 
 ## クイックスタート
 
 ### 1. 初期設定
 ```bash
 cp .env.example .env
-# 必要に応じて .env に APIキーを設定
+# .env に使用する LLM プロバイダーの API キーを設定（例: OPENAI_API_KEY など）
 ```
 
-### 2. コンテナのビルドとプロキシ起動
+### 2. コンテナイメージのビルド
 ```bash
 make build
-make up-proxy
 ```
 
-### 3. 通信遮断テストの実行
-Gooseコンテナを起動し、内部から検証スクリプトを実行して正しくホワイトリスト制御されているか確認します。
+### 3. 通信遮断の実動テスト
+隔離環境内から検証スクリプトを実行し、通信制御が正常に働いているかテストします：
 ```bash
 make test
 ```
-* ホワイトリスト登録ドメインは通過
-* 未許可ドメインは `403 Forbidden` で遮断
-* プロキシを経由しない直接通信は `Network unreachable` で遮断
+**テスト内容:**
+1. ✅ **ホワイトリストドメイン (`api.openai.com`)**: プロキシ経由で正常に接続
+2. 🛑 **非許可ドメイン (`www.google.com`)**: Squid プロキシが `403 Forbidden` で遮断
+3. 🔒 **直接接続バイパス**: Docker `internal: true` により `Network unreachable` で遮断
 
-### 4. Gooseの起動
+---
 
-#### CLIで利用する場合
-`workspace/AGENTS.md`（または `CLAUDE.md`）のルールを自動で読み込み、隔離環境内の対話CLIを開始します：
+## Goose の実行
+
+### CLI 対話セッション
+`workspace/AGENTS.md` や `.agents/rules/*.md` のルールを自動読み込みし、隔離環境内で Goose CLI を開始します：
 ```bash
 make session
 ```
 
-#### Goose Desktop（デスクトップアプリ）から利用する場合
-サンドボックス内で ACP（Agent Client Protocol）サーバーを起動し、ホストマシンの Goose Desktop から接続して利用します：
+### Goose Desktop（GUI）との連携
+ACP サーバーを起動し、ホスト側の Goose Desktop から接続して作業します：
 ```bash
 make serve
 ```
-* ホスト側の Goose Desktop で、接続先エージェントとして `http://localhost:3284` を指定してセッションを開始します。
-* これにより、GUIフロントエンドの快適さを維持しながら、すべてのコマンド実行・ファイル変更・外部通信制御を隔離コンテナ内で実行できます。
+* ホスト側 Goose Desktop の接続先: `http://localhost:3284`
 
-### 5. スキル・ルールのワークスペース内管理
-ホスト環境に依存せず、すべてのルール・スキルは `workspace/` 配下で完結します：
-* **スキル**: `workspace/.agents/skills/` 配下に `SKILL.md` を配置すると、Gooseのツールとして認識されます。
-* **ルール**: `workspace/AGENTS.md`（または `CLAUDE.md`）に記載します。ルールを分割したい場合は `workspace/.agents/rules/*.md`（または `.rules/*.md`）に配置すると、`make session` 実行時に自動で結合・適用されます。
+### コンテナ内 GUI デスクトップの利用 (noVNC / ブラウザ操作)
+エージェントにブラウザを操作させたり、コンテナ内の画面を丸ごと確認・操作したい場合は、GUI デスクトップ環境を起動します：
+```bash
+make gui
+```
+* 起動後、ホストのブラウザで **`http://localhost:6080/vnc.html`** を開くと、隔離コンテナ内の Xfce4 デスクトップがそのままブラウザ上に表示されます。
+* VNC クライアントから接続する場合は `localhost:5900` にアクセスします。
 
-## プロキシログのリアルタイム監査
-ホスト側からプロキシのアクセスログを監視できます：
+---
+
+## 通信ログの監査・分析
+
+### リアルタイム監査ログの閲覧
 ```bash
 make logs
+```
+
+### 遮断された通信 (403 DENIED) の一覧抽出
+エージェントがアクセスを試みてブロックされたドメインや URL を確認します：
+```bash
+make audit-denied
+```
+
+### 宛先ドメイン別アクセス頻度集計
+```bash
+make audit-summary
+```
+
+---
+
+## ドメインホワイトリストの編集
+許可するドメインを追加・変更したい場合は、`squid/whitelist.txt` を編集後、プロキシコンテナを再起動します：
+```bash
+# squid/whitelist.txt を編集
+docker compose restart egress-proxy
 ```

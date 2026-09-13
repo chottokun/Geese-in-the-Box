@@ -3,6 +3,7 @@ FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# 基本ツール + GUI/noVNC 関連パッケージのインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
@@ -11,11 +12,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     jq \
     ripgrep \
+    # GUI デスクトップ環境 (Xfce4 + Xvfb)
+    xvfb \
+    xfce4 \
+    xfce4-terminal \
+    # VNC & Webブラウザ接続 (noVNC)
+    x11vnc \
+    novnc \
+    websockify \
+    # フォント
+    fonts-noto-cjk \
+    fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
 # 非rootユーザーの作成（UID/GIDはdocker-compose.ymlで上書き可能）
 RUN groupadd -g 1000 sandboxuser \
-    && useradd -m -u 1000 -g sandboxuser sandboxuser \
+    && useradd -m -u 1000 -g sandboxuser -s /bin/bash sandboxuser \
     && mkdir -p /home/sandboxuser/.config/goose /workspace \
     && chown -R sandboxuser:sandboxuser /home/sandboxuser /workspace
 
@@ -27,7 +39,8 @@ RUN curl -fsSL https://github.com/block/goose/releases/download/stable/download_
 # 実行スクリプトのコピー
 COPY bin/test-egress.sh /bin/test-egress.sh
 COPY bin/start-goose.sh /bin/start-goose.sh
-RUN chmod +x /bin/test-egress.sh /bin/start-goose.sh
+COPY bin/start-desktop.sh /bin/start-desktop.sh
+RUN chmod +x /bin/test-egress.sh /bin/start-goose.sh /bin/start-desktop.sh
 
 # 非rootユーザーに切り替え
 USER sandboxuser

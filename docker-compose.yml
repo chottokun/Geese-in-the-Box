@@ -6,7 +6,6 @@ services:
     container_name: egress-proxy
     ports:
       - "127.0.0.1:3128:3128" # 監査用フォワードプロキシ
-      - "127.0.0.1:3284:3284" # Goose Desktop用リバースプロキシ
     volumes:
       - ./squid/squid.conf:/etc/squid/squid.conf:ro
       - ./squid/whitelist.txt:/etc/squid/whitelist.txt:ro
@@ -29,6 +28,10 @@ services:
     stdin_open: true
     tty: true
     user: "${UID:-1000}:${GID:-1000}"
+    ports:
+      - "127.0.0.1:6080:6080" # noVNC (ブラウザ接続用Web UI)
+      - "127.0.0.1:5900:5900" # VNC クライアント接続用
+      - "127.0.0.1:3284:3284" # Goose ACP サーバー用
     environment:
       - HTTP_PROXY=http://egress-proxy:3128
       - HTTPS_PROXY=http://egress-proxy:3128
@@ -36,6 +39,7 @@ services:
       - https_proxy=http://egress-proxy:3128
       - NO_PROXY=localhost,127.0.0.1
       - GOOSE_TELEMETRY_ENABLED=${GOOSE_TELEMETRY_ENABLED:-false}
+      - RESOLUTION=${RESOLUTION:-1280x800x24}
     env_file:
       - .env
     volumes:
