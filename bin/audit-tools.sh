@@ -14,6 +14,7 @@ show_help() {
     echo "  denied      拒否された通信を一覧表示"
     echo "  domains     送信先ドメインの集計（アクセス頻度・転送量順）"
     echo "  violations  不正な接続試行（未許可ポート、未許可メソッド等）のサマリー"
+    echo "  ingress     Ingress（ホスト→コンテナ）の接続履歴を表示"
     echo ""
 }
 
@@ -61,6 +62,12 @@ cmd_violations() {
         | jq -r 'select(.squid_status | test("DENIED")) | .method' | sort | uniq -c | sort -rn || true
 }
 
+cmd_ingress() {
+    echo "=== Ingress 接続履歴 ==="
+    cat logs/nginx/ingress.json 2>/dev/null \
+        | jq -r '[.time, .remote_addr, .method, .uri, .status, .user_agent] | @tsv' | tail -20 || echo "ログがまだありません"
+}
+
 case "${1:-help}" in
     denied)
         cmd_denied
@@ -70,6 +77,9 @@ case "${1:-help}" in
         ;;
     violations)
         cmd_violations
+        ;;
+    ingress)
+        cmd_ingress
         ;;
     *)
         show_help

@@ -65,8 +65,11 @@ goose-in-the-box/
 
 | パラメータ | 説明 | デフォルト値 |
 | :--- | :--- | :--- |
+| **`HOST_BIND`** | ホスト側公開IPバインド設定（全公開: `0.0.0.0`、ローカル限定: `127.0.0.1`、指定NIC-IP） | `0.0.0.0` |
 | **`OPENAI_API_KEY` 等** | 各種 LLM プロバイダーの API キー | （空欄） |
-| **`OLLAMA_HOST`** | ローカル LLM ホスト接続先 | `http://host.docker.internal:11434` |
+| **`OPENAI_BASE_URL`** | OpenAI互換エンドポイント (さくらAI, vLLM, LocalAI等) ※末尾スラッシュなし | `https://api.openai.com/v1` |
+| **`OPENAI_HOST`** | OpenAI互換ホスト名 (プロバイダー解決用) | `https://api.openai.com` |
+| **`OLLAMA_HOST`** | ローカル LLM ホスト接続先 (ポート11434) | `http://host.docker.internal:11434` |
 | **`NOVNC_PORT`** | noVNC Web UI ポート（ブラウザ接続先） | `6080` |
 | **`GOOSE_SERVE_PORT`** | Goose ACP サーバー公開ポート | `3284` |
 | **`SQUID_PORT`** | Squid 監査プロキシポート | `3128` |
@@ -133,12 +136,18 @@ make gui
 
 ### Dozzle によるリアルタイムWebログ監視
 Dozzle が `docker-compose.yml` に定義されており、ブラウザからコンテナのログをリアルタイムに確認・検索・フィルタリングできます：
-* **http://localhost:8080** にアクセス
-* `egress-proxy` コンテナを選択することで、Squid のアクセスログ（`TCP_TUNNEL/200` や `TCP_DENIED/403` など）を色分け・フィルタ監視可能です。
+* **`http://<ホストIP>:8080`** にアクセス (例: `http://localhost:8080` や `http://blue-two.local:8080`)
+* `egress-proxy` コンテナを選択することで、Squid のアクセスログ（`TCP_TUNNEL/200` や `TCP_DENIED/403` など）をヘルスチェックのノイズなしで監視可能です。
 
 ### CLI でのリアルタイム監査ログの閲覧
 ```bash
 make logs
+```
+
+### リアルタイムカラーアラート監視
+拒否された通信を即座に検出し、ターミナルにカラー表示します（ストーム抑制・Webhook通知対応）：
+```bash
+make watch
 ```
 
 ### 遮断された通信 (403 DENIED) の一覧抽出
@@ -147,9 +156,40 @@ make logs
 make audit-denied
 ```
 
-### 宛先ドメイン別アクセス頻度集計
+### 宛先ドメイン別アクセス頻度・転送量集計
 ```bash
 make audit-summary
+```
+
+### Ingress (外部からコンテナへの接続) 監査ログ
+noVNC や ACP サーバーへの接続履歴を一覧表示します：
+```bash
+make audit-ingress
+```
+
+### 監査ログの読み方とHTMLレポート生成
+Squid の JSON ログ (`/var/log/squid/access.json`) には、以下のフィールドが記録されています：
+- `user_agent`: 通信を発生させたツールやライブラリの特定
+- `content_type`: 送受信データの種別
+- `referer`: 通信の文脈
+- `bytes_sent` / `bytes_received`: 送受信バイト数
+- `duration_ms`: 通信所要時間（ミリ秒）
+
+グラフィカルな HTML 監査レポートをワンライナーで生成できます：
+```bash
+make report
+```
+生成された `logs/audit-report.html` をブラウザで開いて確認できます。
+
+### セッション別（日付別）の通信傾向比較
+過去にローテーションされたログも含め、セッション横断で通信傾向を比較集計します：
+```bash
+make audit-history
+```
+
+### 監査ログの手動ローテーション
+```bash
+make log-rotate
 ```
 
 ---

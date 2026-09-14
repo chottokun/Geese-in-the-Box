@@ -1,4 +1,4 @@
-.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help
+.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report audit-history
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
@@ -19,6 +19,9 @@ down:
 # 通信遮断テストの実行 (L3/L4 内部隔離 & L7 Squid 制御)
 test: up-proxy
 	docker compose run --rm goose-agent /bin/test-egress.sh
+	@echo "=== [監査ログ構造検証 (ホスト側)] ==="
+	@docker compose exec -T egress-proxy cat /var/log/squid/access.json 2>/dev/null | tail -n 20 | grep -q "user_agent" && echo "  -> OK: 監査ログの JSON 構造 (user_agent 等) が正常に記録されています" || (echo "  -> FAIL: 監査ログに user_agent フィールドが見つかりません" && exit 1)
+
 
 # Goose CLI 対話セッションの起動 (AGENTS.md / ルール自動読み込み)
 session: up-proxy
@@ -56,6 +59,40 @@ audit-summary:
 # 不正・拒否通信サマリー
 audit-violations:
 	@./bin/audit-tools.sh violations
+
+# リアルタイムアラート監視の起動
+watch:
+	@./bin/watch-alerts.sh
+
+# Webhook 付きアラート監視（環境変数 ALERT_WEBHOOK_URL を設定）
+watch-webhook:
+	@ALERT_WEBHOOK_URL=$(ALERT_WEBHOOK_URL) ./bin/watch-alerts.sh
+
+# 監査ログのローテーション（古いログを日付付きで保存）
+log-rotate:
+	@TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+	for f in logs/squid/access.json logs/squid/access.log; do \
+		if [ -f "$$f" ]; then \
+			cp "$$f" "$$f.$$TIMESTAMP"; \
+			truncate -s 0 "$$f"; \
+		fi; \
+	done; \
+	docker compose exec egress-proxy squid -k rotate 2>/dev/null || true; \
+	echo "ログをローテーションしました ($$TIMESTAMP)"
+
+# Ingress 接続履歴の表示
+audit-ingress:
+	@cat logs/nginx/ingress.json 2>/dev/null | jq -r '[.time, .remote_addr, .method, .uri, .status, .user_agent] | @tsv' | tail -20 || echo "ログがまだありません"
+
+# HTML 監査レポートの生成
+report:
+	@mkdir -p logs
+	@./bin/generate-report.sh > logs/audit-report.html
+	@echo "監査レポートを生成しました: logs/audit-report.html"
+
+# セッション横断の通信サマリー
+audit-history:
+	@./bin/session-audit.sh
 
 # ==========================================
 # 宛先ドメイン制御 & キルスイッチ

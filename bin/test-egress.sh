@@ -48,6 +48,37 @@ else
 fi
 
 echo ""
+echo ""
+echo "=== [4/6] host.docker.internal ポート制限テスト ==="
+if curl -s -I --proxy "$PROXY" http://host.docker.internal:11434 2>&1 | grep -q -E "HTTP/.* (200|404|401)"; then
+    echo "  -> OK: ポート 11434 (Ollama) への接続許可"
+    PASS=$((PASS + 1))
+else
+    echo "  -> FAIL: ポート 11434 (Ollama) が拒否されました"
+    FAIL=$((FAIL + 1))
+fi
+
+OUTPUT=$(curl -v --proxy "$PROXY" http://host.docker.internal:8080 2>&1 || true)
+if echo "$OUTPUT" | grep -q -E "403|Forbidden"; then
+    echo "  -> OK: ポート 8080 への接続が拒否されました"
+    PASS=$((PASS + 1))
+else
+    echo "  -> FAIL: ポート 8080 への接続が許可されてしまいました"
+    FAIL=$((FAIL + 1))
+fi
+
+echo ""
+echo ""
+echo "=== [5/5] 未許可ドメイン・キルスイッチ遮断テスト ==="
+if curl -s -I --proxy "$PROXY" http://unauthorized.local 2>&1 | grep -q -E "403|Forbidden"; then
+    echo "  -> OK: 未許可ドメインが期待通りに遮断されています"
+    PASS=$((PASS + 1))
+else
+    echo "  -> FAIL: 未許可ドメインが遮断されませんでした"
+    FAIL=$((FAIL + 1))
+fi
+
+echo ""
 echo "=================================================="
 echo " テスト結果: $PASS 成功, $FAIL 失敗"
 echo "=================================================="

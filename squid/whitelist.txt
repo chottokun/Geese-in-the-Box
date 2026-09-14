@@ -38,9 +38,6 @@
 .cohere.ai
 .cohere.com
 
-# --- ローカル LLM (Ollama 等) ---
-host.docker.internal
-
 # --- GitHub（コード取得・API利用） ---
 github.com
 api.github.com
@@ -49,3 +46,8 @@ api.github.com
 pypi.org
 files.pythonhosted.org
 registry.npmjs.org
+
+# --- さくらAI (Sakura Internet AI) ---
+.sakura.ad.jp
+
+

@@ -66,7 +66,8 @@ WEBSOCKIFY_PID=$!
 sleep 1
 
 # 7. Goose Desktop GUI アプリの自動起動
-echo "7. Goose Desktop GUI アプリを起動..."
+echo "7. Goose Desktop GUI アプリを起動 (作業ディレクトリ: /workspace)..."
+cd /workspace
 /usr/lib/goose/Goose &
 
 echo "=========================================================="
