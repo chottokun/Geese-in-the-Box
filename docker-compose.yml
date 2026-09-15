@@ -38,6 +38,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./logs/nginx:/var/log/nginx
+      - ./logs/report:/usr/share/nginx/html/report:ro
     networks:
       - internal-net
       - external-net
@@ -115,6 +116,36 @@ services:
       - "${HOST_BIND:-0.0.0.0}:${DOZZLE_PORT:-8080}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # ------------------------------------------------------------
+  # 可観測性ダッシュボード自動集計ワーカー (常駐・自動更新)
+  # ------------------------------------------------------------
+  report-watcher:
+    image: goose-in-the-box-goose-agent:latest
+    container_name: report-watcher
+    user: "${UID:-1000}:${GID:-1000}"
+    restart: unless-stopped
+    volumes:
+      - ./bin/generate-report.sh:/bin/generate-report.sh:ro
+      - ./config/llm-pricing.json:/workspace/config/llm-pricing.json:ro
+      - ./logs/squid:/workspace/logs/squid:ro
+      - ./logs/report:/workspace/logs/report:rw
+    working_dir: /workspace
+    environment:
+      - BASE_DIR=/workspace
+      - REPORT_INTERVAL=${REPORT_INTERVAL:-30}
+    command: >
+      sh -c '
+        echo "Starting automated report watcher (interval: $${REPORT_INTERVAL}s)...";
+        while true; do
+          /bin/generate-report.sh >/dev/null 2>&1 || true;
+          sleep $${REPORT_INTERVAL};
+        done
+      '
+    networks:
+      - internal-net
+    depends_on:
+      - egress-proxy
 
 networks:
   internal-net:

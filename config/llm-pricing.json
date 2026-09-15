@@ -1,0 +1,48 @@
+{
+  "_comment": "LLM プロバイダー別トークン単価設定（1M トークンあたり USD。為替レート usd_to_jpy で日本円換算）",
+  "usd_to_jpy": 150,
+  "thresholds": {
+    "deny_rate_warn_percent": 15.0,
+    "deny_rate_crit_percent": 30.0,
+    "single_transfer_warn_bytes": 1048576,
+    "total_cost_warn_usd": 10.0
+  },
+  "providers": {
+    "api.ai.sakura.ad.jp": {
+      "name": "さくらAI",
+      "input_per_1m_usd": 0.00,
+      "output_per_1m_usd": 0.00,
+      "note": "高火力ラボ / 無料枠"
+    },
+    "api.openai.com": {
+      "name": "OpenAI",
+      "input_per_1m_usd": 2.50,
+      "output_per_1m_usd": 10.00,
+      "note": "gpt-4o 基準"
+    },
+    "api.anthropic.com": {
+      "name": "Anthropic",
+      "input_per_1m_usd": 3.00,
+      "output_per_1m_usd": 15.00,
+      "note": "Claude 3.5 Sonnet 基準"
+    },
+    "generativelanguage.googleapis.com": {
+      "name": "Google",
+      "input_per_1m_usd": 1.25,
+      "output_per_1m_usd": 5.00,
+      "note": "Gemini 1.5 Flash 基準"
+    },
+    "api.groq.com": {
+      "name": "Groq",
+      "input_per_1m_usd": 0.59,
+      "output_per_1m_usd": 0.79,
+      "note": "Llama 3 70B 基準"
+    },
+    "api.mistral.ai": {
+      "name": "Mistral",
+      "input_per_1m_usd": 2.00,
+      "output_per_1m_usd": 6.00,
+      "note": "Mistral Large 基準"
+    }
+  }
+}

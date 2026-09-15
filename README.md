@@ -167,19 +167,28 @@ noVNC や ACP サーバーへの接続履歴を一覧表示します：
 make audit-ingress
 ```
 
-### 監査ログの読み方とHTMLレポート生成
-Squid の JSON ログ (`/var/log/squid/access.json`) には、以下のフィールドが記録されています：
-- `user_agent`: 通信を発生させたツールやライブラリの特定
-- `content_type`: 送受信データの種別
-- `referer`: 通信の文脈
-- `bytes_sent` / `bytes_received`: 送受信バイト数
-- `duration_ms`: 通信所要時間（ミリ秒）
+### 監査ログ・LLM可観測性ダッシュボード & API
+Squid の JSON ログ (`/var/log/squid/access.json`) を解析し、**人間向け Web ダッシュボード**と **LLM 向け構造化 API (JSON / Markdown)** を一括生成・配信します：
 
-グラフィカルな HTML 監査レポートをワンライナーで生成できます：
+- `user_agent`: 通信を発生させたツールやライブラリの特定
+- `bytes_sent` / `bytes_received`: 送受信バイト数から LLM 消費トークン・コストを概算推計 (±50%目安)
+- `duration_ms`: レスポンス所要時間（ミリ秒）
+- `alerts`: 通信遮断率スパイクや大容量転送の事前評価アラート
+
 ```bash
+# ダッシュボードおよび JSON / Markdown API を即時手動生成
 make report
+
+# LLM エージェント監視用に JSON のみ stdout に出力
+make report-json
 ```
-生成された `logs/audit-report.html` をブラウザで開いて確認できます。
+
+- 🔄 **常時自動更新 (`report-watcher`)**:
+  - Docker Compose 起動中 (`make up-proxy` または `docker compose up -d`)、専用のバックグラウンドワーカーが **30秒ごとに自動集計** を継続実行します。ターミナルで監視プロセスを手動起動し続ける必要はありません（更新間隔は `.env` の `REPORT_INTERVAL` で調整可能）。
+- 📊 **Web UI ダッシュボード**: `http://<ホストIP>:6080/report/` (30秒自動リフレッシュ、noVNC・Dozzle への相互リンク付き)
+- 🤖 **LLM 向け JSON API**: `http://<ホストIP>:6080/report/api/status.json` (`curl` や LLM が即座にパース・判定可能)
+- 📝 **LLM 向け Markdown 要約**: `http://<ホストIP>:6080/report/api/summary.md` (コンテキスト消費を最小化するテキスト要約)
+- ⚙️ **プロバイダー単価・閾値設定**: `config/llm-pricing.json` でモデル単価や為替レート、アラート基準値を柔軟に調整可能
 
 ### セッション別（日付別）の通信傾向比較
 過去にローテーションされたログも含め、セッション横断で通信傾向を比較集計します：

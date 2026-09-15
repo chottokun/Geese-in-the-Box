@@ -13,6 +13,7 @@ workspace/*
 # Goose設定（ローカル固有）
 config/*
 !config/.gitkeep
+!config/llm-pricing.json
 
 # 永続化データ・エクスポート
 data/*

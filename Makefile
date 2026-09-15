@@ -1,4 +1,4 @@
-.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report audit-history
+.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
@@ -8,9 +8,9 @@
 build:
 	docker compose build
 
-# プロキシコンテナの起動（バックグラウンド）
+# プロキシコンテナおよび監視自動集計の起動（バックグラウンド）
 up-proxy:
-	docker compose up -d egress-proxy ingress-proxy
+	docker compose up -d egress-proxy ingress-proxy report-watcher
 
 # 全コンテナの停止
 down:
@@ -84,11 +84,29 @@ log-rotate:
 audit-ingress:
 	@cat logs/nginx/ingress.json 2>/dev/null | jq -r '[.time, .remote_addr, .method, .uri, .status, .user_agent] | @tsv' | tail -20 || echo "ログがまだありません"
 
-# HTML 監査レポートの生成
+# HTML / JSON / Markdown 監査レポートの一括生成
 report:
-	@mkdir -p logs
-	@./bin/generate-report.sh > logs/audit-report.html
-	@echo "監査レポートを生成しました: logs/audit-report.html"
+	@mkdir -p logs/report/api
+	@./bin/generate-report.sh
+	@echo "📊 ダッシュボードを生成しました:"
+	@echo "   - Web UI:   http://localhost:6080/report/"
+	@echo "   - JSON API: logs/report/api/status.json"
+	@echo "   - Markdown: logs/report/api/summary.md"
+
+# LLM 向け JSON レポートのみ stdout に出力 (LLMエージェント監視パイプライン用)
+report-json:
+	@mkdir -p logs/report/api
+	@./bin/generate-report.sh >/dev/null 2>&1
+	@cat logs/report/api/status.json
+
+# レポートの自動更新ループ (30秒間隔でバックグラウンドまたはフォアグラウンド実行)
+report-watch:
+	@echo "レポートの自動更新ループを開始します (30秒間隔 / Ctrl+C で停止)..."
+	@while true; do \
+		./bin/generate-report.sh >/dev/null 2>&1; \
+		echo "$$(date '+%Y-%m-%d %H:%M:%S') - レポートを更新しました"; \
+		sleep 30; \
+	done
 
 # セッション横断の通信サマリー
 audit-history:
