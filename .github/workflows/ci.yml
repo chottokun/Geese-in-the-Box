@@ -1,47 +1,88 @@
-name: CI Sandbox Egress Test
+name: CI Sandbox Egress & Audit Test
 
 on:
   push:
     branches: [ main ]
-  pull_request:
     paths:
       - 'squid/**'
       - 'goose/**'
-      - 'docker-compose.yml'
+      - 'nginx/**'
+      - 'config/**'
       - 'bin/**'
       - 'Makefile'
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'squid/**'
+      - 'goose/**'
+      - 'nginx/**'
+      - 'config/**'
+      - 'bin/**'
+      - 'Makefile'
+      - 'docker-compose.yml'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint-and-syntax:
+  static-analysis:
     name: 静的解析 & 構文チェック
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
 
       - name: 依存パッケージのインストール (Squid, ShellCheck)
         run: |
           sudo apt-get update
-          sudo apt-get install -y squid shellcheck
+          sudo apt-get install -y squid shellcheck jq
 
       - name: 1. Squid 設定ファイルの構文検証
         run: |
+          sudo mkdir -p /etc/squid
+          sudo cp squid/whitelist.txt /etc/squid/whitelist.txt
           sudo squid -k parse -f squid/squid.conf
 
       - name: 2. シェルスクリプトの静的解析 (ShellCheck)
         run: |
           shellcheck bin/*.sh
 
-  egress-integration-test:
-    name: 通信完全遮断 実動テスト
+      - name: 3. Nginx 設定ファイルの構文検証
+        run: |
+          docker run --rm -v "$PWD/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:alpine nginx -t
+
+      - name: 4. Docker Compose 定義の構文検証
+        run: |
+          docker compose config --quiet
+
+      - name: 5. 埋め込み Python スクリプトの構文検証
+        run: |
+          sed -n '/PYEOF/,/PYEOF/p' bin/generate-report.sh | grep -v PYEOF | python3 -c "import sys, ast; ast.parse(sys.stdin.read())"
+
+  integration-tests:
+    name: 通信完全遮断 & 可観測性 実動テスト
+    needs: static-analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Docker Buildx のセットアップ
+        uses: docker/setup-buildx-action@v3
 
       - name: 環境セットアップ
         run: |
           touch .env
-          mkdir -p workspace config logs/squid
-          chmod -R 777 logs/squid
+          mkdir -p workspace config logs/squid logs/nginx logs/report/api
+          chmod -R 777 logs
 
       - name: コンテナのビルド
         run: |
@@ -51,8 +92,23 @@ jobs:
         run: |
           make test
 
-      - name: 監査集計機能の検証
+      - name: 監査・分析・可観測性機能の動作検証
         run: |
           make audit-denied
           make audit-summary
           make audit-violations
+          make audit-ingress
+          make report
+          make report-json
+          jq . logs/report/api/status.json > /dev/null
+
+      - name: 監査ログ・レポートのアーティファクト保存
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-and-report-logs
+          path: |
+            logs/squid/
+            logs/nginx/
+            logs/report/
+          retention-days: 7
