@@ -54,6 +54,7 @@ services:
     build:
       context: .
       dockerfile: goose/Dockerfile
+    image: goose-agent:latest
     container_name: goose-agent
     stdin_open: true
     tty: true
@@ -121,7 +122,7 @@ services:
   # 可観測性ダッシュボード自動集計ワーカー (常駐・自動更新)
   # ------------------------------------------------------------
   report-watcher:
-    image: goose-in-the-box-goose-agent:latest
+    image: goose-agent:latest
     container_name: report-watcher
     user: "${UID:-1000}:${GID:-1000}"
     restart: unless-stopped
