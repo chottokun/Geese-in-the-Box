@@ -466,6 +466,7 @@ html_content = f"""<!DOCTYPE html>
         <span class="badge { 'badge-healthy' if '正常' in health_status else ('badge-crit' if '異常' in health_status else 'badge-warn') }">{health_status}</span>
     </h1>
     <div class="nav-links">
+        <a class="nav-link" href="/control/" style="border-color: var(--accent-blue); background: rgba(88, 166, 255, 0.15);">🎛️ コントロールパネル</a>
         <a class="nav-link" href="/vnc.html" target="_blank">🖥️ noVNC 操作</a>
         <a class="nav-link" id="dozzle-link" href="#" target="_blank" onclick="this.href='//' + window.location.hostname + ':8080/';">📜 Dozzle ログ</a>
         <a class="nav-link" href="/report/api/status.json" target="_blank">🤖 JSON API</a>

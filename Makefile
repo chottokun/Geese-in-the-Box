@@ -1,4 +1,4 @@
-.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history
+.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
@@ -8,9 +8,17 @@
 build:
 	docker compose build
 
-# プロキシコンテナおよび監視自動集計の起動（バックグラウンド）
+# プロキシコンテナ・コントロールパネル・Dozzleおよび監視自動集計の起動（バックグラウンド）
 up-proxy:
-	docker compose up -d egress-proxy ingress-proxy report-watcher
+	docker compose up -d egress-proxy ingress-proxy report-watcher control-panel dozzle
+
+# 統合コントロールパネル Web UI (http://localhost:6080/control/)
+control: up-proxy
+	@echo "=========================================================="
+	@echo " 🎛️ Goose-in-the-Box 統合コントロールパネル"
+	@echo " ブラウザで以下の URL を開いてください:"
+	@echo " 👉 http://localhost:6080/control/"
+	@echo "=========================================================="
 
 # 全コンテナの停止
 down:

@@ -24,6 +24,11 @@ exports/
 squid_logs/
 logs/
 
+# Python キャッシュ
+__pycache__/
+*.pyc
+*.pyo
+
 # OS固有
 .DS_Store
 Thumbs.db
