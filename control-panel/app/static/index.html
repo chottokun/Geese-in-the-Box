@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goose-in-the-Box 統合コントロールパネル</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-area">
+        <h1>🎛️ Goose-in-the-Box コントロールパネル</h1>
+      </div>
+      <div class="header-status">
+        <div id="statusBadge" class="badge badge-online">
+          <span id="statusDot">🟢</span> <span id="statusText">ONLINE</span>
+        </div>
+        <button id="quickKillswitchBtn" class="btn btn-danger" onclick="toggleKillswitch()">
+          🔴 全遮断 (Killswitch)
+        </button>
+        <button id="logoutBtn" class="btn btn-secondary" style="display:none;" onclick="logout()">
+          🚪 ログアウト
+        </button>
+      </div>
+    </header>
+
+    <!-- Notification Banner -->
+    <div id="notificationBanner" style="display:none;" class="alert-msg alert-success"></div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('dashboard')">📊 監査ダッシュボード</button>
+      <button class="tab-btn" onclick="switchTab('network')">🔒 通信制御 (キルスイッチ・WL)</button>
+      <button class="tab-btn" onclick="switchTab('audit')">📋 操作ログ</button>
+    </nav>
+
+    <!-- TAB 1: 監査ダッシュボード -->
+    <section id="tab-dashboard" class="tab-content active">
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="lbl">総リクエスト数</div>
+          <div class="val" id="statTotalRequests">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="lbl">許可リクエスト (ALLOWED)</div>
+          <div class="val" style="color:#3fb950;" id="statAllowedRequests">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="lbl">遮断リクエスト (DENIED)</div>
+          <div class="val" style="color:#f85149;" id="statDeniedRequests">-</div>
+        </div>
+        <div class="stat-box">
+          <div class="lbl">遮断率 (Block Rate)</div>
+          <div class="val" style="color:#d29922;" id="statBlockRate">-</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">
+            <span>🚨 直近の遮断 (DENIED) ログ</span>
+            <button class="btn btn-secondary" onclick="loadDashboard()">🔄 更新</button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>時刻</th>
+                  <th>宛先ドメイン</th>
+                  <th>メソッド</th>
+                  <th>クライアント</th>
+                </tr>
+              </thead>
+              <tbody id="recentDeniedTable">
+                <tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">読み込み中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>🌐 ドメイン別アクセス Top 10</span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ドメイン</th>
+                  <th>総数</th>
+                  <th>許可</th>
+                  <th>遮断</th>
+                </tr>
+              </thead>
+              <tbody id="topDomainsTable">
+                <tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">読み込み中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: 通信制御 -->
+    <section id="tab-network" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>🔴 緊急キルスイッチ (Killswitch)</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <p id="killswitchDesc" style="font-weight:600; font-size:15px; margin-bottom:4px;">
+              現在の状態: 全通信許可中 (ONLINE)
+            </p>
+            <p style="color:var(--text-secondary); font-size:12px;" id="killswitchLastUpdated">
+              最終更新: -
+            </p>
+          </div>
+          <div>
+            <button id="mainKillswitchBtn" class="btn btn-danger" onclick="toggleKillswitch()" style="font-size:14px; padding:10px 20px;">
+              🔴 緊急全通信遮断
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>📋 ドメインホワイトリスト管理 (whitelist.txt)</span>
+          <div>
+            <button class="btn btn-secondary" onclick="reloadSquidConfig()">🔄 Squid 再設定 (reconfigure)</button>
+            <button class="btn btn-secondary" onclick="loadWhitelist()">🔄 再読み込み</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <input type="text" id="newDomainInput" placeholder="許可ドメインを追加 (例: .openai.com, github.com)" onkeydown="if(event.key==='Enter') addDomain()">
+          <button class="btn btn-success" onclick="addDomain()">➕ 追加</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>状態</th>
+                <th>ドメイン</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="whitelistTable">
+              <tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">読み込み中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 操作ログ -->
+    <section id="tab-audit" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>📋 コントロールパネル操作監査ログ (control-panel-audit.json)</span>
+          <button class="btn btn-secondary" onclick="loadOperationAudit()">🔄 更新</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>日時</th>
+                <th>アクション</th>
+                <th>クライアント IP</th>
+                <th>詳細</th>
+              </tr>
+            </thead>
+            <tbody id="auditLogsTable">
+              <tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">読み込み中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-title">🔐 コントロールパネル ログイン</div>
+      <div id="loginError" class="alert-msg alert-error" style="display:none;"></div>
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group" style="margin-bottom:20px;">
+          <input type="password" id="passwordInput" placeholder="パスワードを入力" required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:10px;">
+          ログイン
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

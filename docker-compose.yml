@@ -109,6 +109,29 @@ services:
       egress-proxy:
         condition: service_healthy
 
+  # ------------------------------------------------------------
+  # Control Panel Service (統合コントロールパネル: 監査 + キルスイッチ + 通信制御)
+  # ------------------------------------------------------------
+  control-panel:
+    build:
+      context: ./control-panel
+      dockerfile: Dockerfile
+    container_name: control-panel
+    restart: unless-stopped
+    volumes:
+      - ./squid/whitelist.txt:/app/data/whitelist.txt:rw
+      - ./config:/app/config:rw
+      - ./logs:/app/logs:rw
+      - ./.env:/app/.env:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=${TZ:-Asia/Tokyo}
+      - CONTROL_PANEL_PASSWORD=${CONTROL_PANEL_PASSWORD:-}
+      - DISABLE_AUTH=${DISABLE_AUTH:-false}
+      - SQUID_CONTAINER_NAME=egress-proxy
+    networks:
+      - external-net
+
   # Dozzle - Lightweight Log Viewer (Web リアルタイムログ監視)
   dozzle:
     image: amir20/dozzle:latest
