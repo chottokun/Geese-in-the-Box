@@ -102,6 +102,11 @@ jobs:
           make report-json
           jq . logs/report/api/status.json > /dev/null
 
+      - name: ログファイル読み込み権限の調整 (アーティファクト生成用)
+        if: always()
+        run: |
+          sudo chmod -R +r logs/
+
       - name: 監査ログ・レポートのアーティファクト保存
         if: always()
         uses: actions/upload-artifact@v4
