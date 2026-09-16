@@ -64,11 +64,8 @@ cmd_violations() {
 
 cmd_ingress() {
     echo "=== Ingress 接続履歴 ==="
-    if [ -f logs/nginx/ingress.json ]; then
-        jq -r '[.time, .remote_addr, .method, .uri, .status, .user_agent] | @tsv' logs/nginx/ingress.json | tail -20
-    else
-        echo "ログがまだありません"
-    fi
+    cat logs/nginx/ingress.json 2>/dev/null \
+        | jq -r '[.time, .remote_addr, .method, .uri, .status, .user_agent] | @tsv' | tail -20 || echo "ログがまだありません"
 }
 
 case "${1:-help}" in

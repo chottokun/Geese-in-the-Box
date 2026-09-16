@@ -23,10 +23,7 @@ export ELECTRON_EXTRA_LAUNCH_ARGS="--no-sandbox"
 # 終了ハンドラ
 cleanup() {
     echo "=== 停止シグナルを受信しました。プロセスを終了します ==="
-    pids=$(jobs -p)
-    if [ -n "$pids" ]; then
-        echo "$pids" | xargs -r kill 2>/dev/null || true
-    fi
+    kill $(jobs -p) 2>/dev/null || true
     exit 0
 }
 trap cleanup SIGINT SIGTERM
@@ -37,13 +34,12 @@ rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
 # 1. 仮想フレームバッファ (Xvfb) の起動
 echo "1. Xvfb 仮想ディスプレイ (:1) を起動..."
 Xvfb :1 -screen 0 "$RESOLUTION" &
-# shellcheck disable=SC2034
 XVFB_PID=$!
 sleep 1
 
 # 2. D-Bus セッションバスの起動
 echo "2. D-Bus セッションバスを起動..."
-eval "$(dbus-launch --sh-syntax)"
+eval $(dbus-launch --sh-syntax)
 export DBUS_SESSION_BUS_ADDRESS
 export DBUS_SESSION_BUS_PID
 

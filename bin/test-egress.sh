@@ -50,8 +50,7 @@ fi
 echo ""
 echo ""
 echo "=== [4/6] host.docker.internal ポート制限テスト ==="
-OUTPUT_OLLAMA=$(curl -s -I --proxy "$PROXY" http://host.docker.internal:11434 2>&1 || true)
-if echo "$OUTPUT_OLLAMA" | grep -q -E "HTTP/.* (200|401|404|502|503|504)"; then
+if curl -s -I --proxy "$PROXY" http://host.docker.internal:11434 2>&1 | grep -q -E "HTTP/.* (200|404|401)"; then
     echo "  -> OK: ポート 11434 (Ollama) への接続許可"
     PASS=$((PASS + 1))
 else
