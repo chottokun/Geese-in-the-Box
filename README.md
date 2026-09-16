@@ -1,5 +1,7 @@
 # Goose-in-the-Box: AI エージェント完全通信制御＆監査サンドボックス
 
+[![CI Sandbox Egress & Audit Test](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml)
+
 [English](README.en.md) | [日本語](README.md)
 
 AIエージェント「Goose」を安全に実行するための、Dockerベースの通信完全隔離・監査サンドボックスです。
@@ -254,3 +256,21 @@ make unblock
      make export-workspace
      ```
      `exports/workspace_YYYYMMDD_HHMMSS.tar.gz` にアーカイブが出力されます。
+
+---
+
+## CI / 自動テストパイプライン
+
+本リポジトリでは GitHub Actions により、プッシュおよびプルリクエスト時に以下の2段階パイプラインが自動実行されます：
+
+1. **静的解析 & 構文検証 (`static-analysis`)**:
+   - Squid 設定構文チェック (`squid -k parse`)
+   - シェルスクリプト静的解析 (`shellcheck bin/*.sh`)
+   - Nginx 設定構文チェック (`nginx -t`)
+   - Docker Compose 定義構文検証 (`docker compose config --quiet`)
+   - 埋め込み Python スクリプト構文検証 (AST パース)
+2. **通信完全遮断 & 可観測性 実動テスト (`integration-tests`)**:
+   - Docker コンテナの自動ビルド
+   - L3/L4 内部隔離および L7 プロキシ経由の通信完全遮断テスト (`make test`)
+   - 監査集計・ダッシュボード・JSON/Markdown API 生成の動作検証 (`make report`)
+   - 監査ログ・レポート成果物の自動保存（GitHub Actions アーティファクト）

@@ -1,5 +1,7 @@
 # Goose-in-the-Box: Complete Traffic Control & Audit Sandbox for AI Agents
 
+[![CI Sandbox Egress & Audit Test](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml)
+
 [English](README.en.md) | [日本語](README.md)
 
 Goose-in-the-Box is a Docker-based, completely network-isolated and audited sandbox designed for safely running the AI agent "Goose".
@@ -262,3 +264,21 @@ The sandbox includes pre-configured tooling and best practices so AI agents can 
      make export-workspace
      ```
      Archives are saved to `exports/workspace_YYYYMMDD_HHMMSS.tar.gz`.
+
+---
+
+## CI / Automated Test Pipeline
+
+This repository uses GitHub Actions to automatically run a dual-stage CI pipeline on pushes and pull requests:
+
+1. **Static Analysis & Syntax Verification (`static-analysis`)**:
+   - Squid configuration syntax validation (`squid -k parse`)
+   - Shell script static analysis (`shellcheck bin/*.sh`)
+   - Nginx configuration syntax validation (`nginx -t`)
+   - Docker Compose definition validation (`docker compose config --quiet`)
+   - Embedded Python script syntax validation (AST parsing)
+2. **Traffic Isolation & Observability Integration Tests (`integration-tests`)**:
+   - Automated Docker container build
+   - End-to-end egress control tests via L3/L4 internal network & L7 proxy (`make test`)
+   - Verification of audit summaries, observability dashboard, and JSON/Markdown APIs (`make report`)
+   - Automated archiving of audit logs and report artifacts (GitHub Actions Artifacts)
