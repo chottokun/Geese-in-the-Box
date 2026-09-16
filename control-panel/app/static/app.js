@@ -195,16 +195,28 @@ async function loadDashboard() {
     const deniedTbody = document.getElementById("recentDeniedTable");
     const recentDenied = data.recent_denials || data.recent_denied || [];
     if (recentDenied.length === 0) {
-      deniedTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">遮断ログはありません</td></tr>`;
+      deniedTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">遮断ログはありません</td></tr>`;
     } else {
-      deniedTbody.innerHTML = recentDenied.slice(0, 10).map(item => `
+      deniedTbody.innerHTML = recentDenied.slice(0, 10).map(item => {
+        const dom = item.domain || "";
+        const isActionable = dom && dom !== "-" && !dom.includes(" ");
+        return `
         <tr>
           <td>${item.time ? new Date(item.time).toLocaleTimeString("ja-JP") : "-"}</td>
-          <td style="color:#f85149; font-weight:600;">${item.domain || "-"}</td>
+          <td style="color:#f85149; font-weight:600;">${dom || "-"}</td>
           <td><code>${item.method || "-"}</code></td>
           <td>${item.client || item.url || "-"}</td>
+          <td>
+            ${isActionable ? `
+              <div class="quick-allow-group">
+                <button class="btn btn-temp btn-xs" title="15分間一時許可" onclick="quickAllowDomain('${dom}', 15)">⏳ 15分</button>
+                <button class="btn btn-temp btn-xs" title="1時間一時許可" onclick="quickAllowDomain('${dom}', 60)">⏳ 1時間</button>
+                <button class="btn btn-secondary btn-xs" title="恒久追加" onclick="quickAllowDomain('${dom}', 0)">➕ 恒久</button>
+              </div>
+            ` : '-'}
+          </td>
         </tr>
-      `).join("");
+      `}).join("");
     }
 
     // Render Top Domains
@@ -227,6 +239,37 @@ async function loadDashboard() {
   }
 }
 
+// Quick Allow Domain from Denied Log
+async function quickAllowDomain(domain, minutes) {
+  const isPermanent = minutes === 0;
+  const promptText = isPermanent
+    ? `ドメイン '${domain}' をホワイトリストに恒久追加しますか？`
+    : `ドメイン '${domain}' を ${minutes} 分間、一時的にホワイトリストに追加しますか？`;
+
+  if (!confirm(promptText)) return;
+
+  try {
+    let res;
+    if (isPermanent) {
+      res = await apiCall("/api/whitelist", {
+        method: "POST",
+        body: JSON.stringify({ domain })
+      });
+    } else {
+      res = await apiCall("/api/whitelist/temporary", {
+        method: "POST",
+        body: JSON.stringify({ domain, duration_minutes: minutes })
+      });
+    }
+
+    showNotification(res.message, "success");
+    loadWhitelist();
+    loadDashboard();
+  } catch (err) {
+    showNotification(`エラー: ${err.message}`, "error");
+  }
+}
+
 // Whitelist Management
 async function loadWhitelist() {
   try {
@@ -239,7 +282,14 @@ async function loadWhitelist() {
       return;
     }
 
-    tbody.innerHTML = domains.map(d => `
+    tbody.innerHTML = domains.map(d => {
+      let badgeHtml = "";
+      if (d.is_temporary && d.remaining_seconds !== null) {
+        const minsLeft = Math.ceil(d.remaining_seconds / 60);
+        badgeHtml = `<span class="badge badge-temp" title="期限: ${new Date(d.expires_at).toLocaleTimeString('ja-JP')}">⏳ 残り ${minsLeft}分</span>`;
+      }
+
+      return `
       <tr>
         <td>
           <button class="btn ${d.enabled ? 'btn-success' : 'btn-secondary'}" onclick="toggleDomain('${d.domain}', ${!d.enabled})">
@@ -247,13 +297,13 @@ async function loadWhitelist() {
           </button>
         </td>
         <td style="${!d.enabled ? 'text-decoration:line-through; color:var(--text-secondary);' : 'font-weight:600;'}">
-          ${d.domain}
+          ${d.domain} ${badgeHtml}
         </td>
         <td>
           <button class="btn btn-danger" onclick="deleteDomain('${d.domain}')">🗑️ 削除</button>
         </td>
       </tr>
-    `).join("");
+    `}).join("");
   } catch (err) {
     console.error("Whitelist load failed:", err);
   }

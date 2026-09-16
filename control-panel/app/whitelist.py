@@ -1,10 +1,15 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from app.auth import get_current_user
 from app.squid_service import reconfigure_squid
 from app.audit import log_control_operation
+from app.temp_whitelist import (
+    get_temp_domains_info,
+    register_temp_domain,
+    remove_temp_domain
+)
 
 router = APIRouter(prefix="/api/whitelist", tags=["whitelist"])
 
@@ -17,6 +22,10 @@ class DomainItem(BaseModel):
 
 class AddDomainRequest(BaseModel):
     domain: str
+
+class AddTempDomainRequest(BaseModel):
+    domain: str
+    duration_minutes: int = Field(15, ge=1, le=1440) # 1分〜24時間
 
 class ToggleDomainRequest(BaseModel):
     enabled: bool
@@ -67,6 +76,22 @@ def write_whitelist_items(items: list[dict], header_lines: list[str] = None):
 @router.get("", dependencies=[Depends(get_current_user)])
 def get_whitelist():
     items, _ = parse_whitelist_file()
+    temp_info_map = get_temp_domains_info()
+
+    for item in items:
+        dom_key = item["domain"].lower()
+        if dom_key in temp_info_map:
+            t_info = temp_info_map[dom_key]
+            item["is_temporary"] = True
+            item["expires_at"] = t_info["expires_at"]
+            item["remaining_seconds"] = t_info["remaining_seconds"]
+            item["duration_minutes"] = t_info["duration_minutes"]
+        else:
+            item["is_temporary"] = False
+            item["expires_at"] = None
+            item["remaining_seconds"] = None
+            item["duration_minutes"] = None
+
     return {"domains": items, "count": len(items)}
 
 @router.post("", dependencies=[Depends(get_current_user)])
@@ -88,11 +113,47 @@ def add_domain(body: AddDomainRequest, request: Request):
 
     log_control_operation(
         action="whitelist_add",
-        details=f"ドメイン追加: {domain} ({reconfig_msg})",
+        details=f"ドメイン恒久追加: {domain} ({reconfig_msg})",
         client_ip=client_ip
     )
 
     return {"status": "ok", "message": f"ドメイン '{domain}' を追加しました。", "squid_reloaded": reconfig_ok}
+
+@router.post("/temporary", dependencies=[Depends(get_current_user)])
+def add_temporary_domain(body: AddTempDomainRequest, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    domain = body.domain.strip()
+    duration = body.duration_minutes
+    if not domain:
+        raise HTTPException(status_code=400, detail="ドメイン名を入力してください。")
+
+    items, headers = parse_whitelist_file()
+    existing_item = next((item for item in items if item["domain"].lower() == domain.lower()), None)
+
+    if existing_item:
+        # すでに無効状態で存在している場合は有効化
+        if not existing_item["enabled"]:
+            existing_item["enabled"] = True
+            write_whitelist_items(items, headers)
+    else:
+        items.append({"domain": domain, "enabled": True})
+        write_whitelist_items(items, headers)
+
+    temp_record = register_temp_domain(domain, duration, client_ip)
+    reconfig_ok, reconfig_msg = reconfigure_squid()
+
+    log_control_operation(
+        action="whitelist_temporary_add",
+        details=f"ドメイン一時許可 ({duration}分間): {domain} ({reconfig_msg})",
+        client_ip=client_ip
+    )
+
+    return {
+        "status": "ok",
+        "message": f"ドメイン '{domain}' を {duration} 分間一時許可しました。",
+        "squid_reloaded": reconfig_ok,
+        "temporary_info": temp_record
+    }
 
 @router.delete("/{domain:path}", dependencies=[Depends(get_current_user)])
 def delete_domain(domain: str, request: Request):
@@ -106,6 +167,7 @@ def delete_domain(domain: str, request: Request):
         raise HTTPException(status_code=404, detail=f"ドメイン '{domain}' が見つかりません。")
 
     write_whitelist_items(new_items, headers)
+    remove_temp_domain(domain)
     reconfig_ok, reconfig_msg = reconfigure_squid()
 
     log_control_operation(

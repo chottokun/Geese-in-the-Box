@@ -116,6 +116,39 @@ header {
   box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
 }
 
+.badge-temp {
+  background-color: rgba(255, 183, 0, 0.15);
+  color: var(--accent-yellow);
+  border: 1px solid var(--accent-yellow);
+  box-shadow: 0 0 8px rgba(255, 183, 0, 0.3);
+  font-size: 11px;
+  padding: 2px 8px;
+  margin-left: 8px;
+}
+
+.quick-allow-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.btn-xs {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.btn-temp {
+  background-color: rgba(255, 183, 0, 0.12);
+  color: var(--accent-yellow);
+  border-color: rgba(255, 183, 0, 0.5);
+}
+
+.btn-temp:hover {
+  background-color: var(--accent-yellow);
+  color: #000000;
+  box-shadow: 0 0 8px rgba(255, 183, 0, 0.6);
+}
+
 .nav-tabs {
   display: flex;
   gap: 8px;
