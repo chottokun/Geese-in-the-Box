@@ -9,9 +9,12 @@ echo "=== セッション別通信サマリー ==="
 printf "%-15s %-8s %-8s %-12s %-20s\n" "日付" "許可" "遮断" "総バイト(MB)" "トップドメイン"
 echo "----------------------------------------------------------------------"
 
-# 日付順にソートして処理 (ls -r で新しいものを下にするなど適宜調整)
-# access.json.* および access.json を対象とする
-for file in $(ls -tr "$LOG_DIR"/access.json* 2>/dev/null); do
+# 日付順にソートして処理
+shopt -s nullglob
+files=("$LOG_DIR"/access.json*)
+shopt -u nullglob
+
+for file in "${files[@]}"; do
     if [ ! -s "$file" ]; then continue; fi
 
     # ファイル内の先頭のログから日付を抽出 (YYYY-MM-DD)

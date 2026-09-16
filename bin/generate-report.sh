@@ -19,13 +19,30 @@ if [ ! -f "${LOG_FILE}" ]; then
     exit 1
 fi
 
+if [ ! -r "${LOG_FILE}" ]; then
+    chmod a+r "${LOG_FILE}" 2>/dev/null || sudo chmod a+r "${LOG_FILE}" 2>/dev/null || true
+fi
+
 if [ ! -f "${PRICING_FILE}" ]; then
     echo "エラー: 単価設定ファイル ${PRICING_FILE} が見つかりません。" >&2
     exit 1
 fi
 
-# uv run python で高精度・高速に集計とファイル出力 (HTML / JSON / Markdown) を実行
-uv run --directory "${BASE_DIR}" python - << 'PYEOF'
+# Python 実行環境の判定 (uv が利用可能なら uv run、なければ python3 / python にフォールバック)
+run_python() {
+    if command -v uv >/dev/null 2>&1; then
+        uv run --directory "${BASE_DIR}" python -
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 -
+    elif command -v python >/dev/null 2>&1; then
+        python -
+    else
+        echo "エラー: Python 実行環境 (uv / python3 / python) が見つかりません。" >&2
+        exit 1
+    fi
+}
+
+run_python << 'PYEOF'
 import json
 import os
 import sys
