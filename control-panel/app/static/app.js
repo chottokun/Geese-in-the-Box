@@ -1,6 +1,220 @@
 let currentKillswitchStatus = "online";
 let isAuthEnabled = false;
 let isAuthenticated = false;
+let currentLang = localStorage.getItem("app_lang") || "ja";
+
+const translations = {
+  ja: {
+    langBtnText: "🌐 English",
+    appTitle: "🎛️ Goose-in-the-Box コントロールパネル",
+    navReport: "📊 監査レポート",
+    navVnc: "🖥️ noVNC 操作",
+    navDozzle: "📜 Dozzle ログ",
+    logoutBtn: "🚪 ログアウト",
+    tabBtnDashboard: "📊 監査ダッシュボード",
+    tabBtnNetwork: "🔒 通信制御 (キルスイッチ・WL)",
+    tabBtnAudit: "📋 操作ログ",
+    lblTotalReq: "総リクエスト数",
+    lblAllowedReq: "許可リクエスト (ALLOWED)",
+    lblDeniedReq: "遮断リクエスト (DENIED)",
+    lblBlockRate: "遮断率 (Block Rate)",
+    titleRecentDenied: "🚨 直近の遮断 (DENIED) ログ",
+    titleTopDomains: "🌐 ドメイン別アクセス Top 10",
+    titleKillswitch: "🔴 緊急キルスイッチ (Killswitch)",
+    titleWhitelist: "📋 ドメインホワイトリスト管理 (whitelist.txt)",
+    titleAudit: "📋 コントロールパネル操作監査ログ (control-panel-audit.json)",
+    btnRefreshText: "🔄 更新",
+    btnReloadText: "🔄 再読み込み",
+    btnReloadSquid: "🔄 Squid 再設定 (reconfigure)",
+    btnAddDomain: "➕ 追加",
+    placeholderAddDomain: "許可ドメインを追加 (例: .openai.com, github.com)",
+    loadingText: "読み込み中...",
+    noDeniedLogs: "遮断ログはありません",
+    noData: "データはありません",
+    noWhitelist: "ホワイトリストにドメインがありません",
+    noAuditLogs: "操作履歴はありません",
+    thDeniedTime: "時刻",
+    thDeniedDomain: "宛先ドメイン",
+    thDeniedMethod: "メソッド",
+    thDeniedClient: "クライアント",
+    thDomDomain: "ドメイン",
+    thDomTotal: "総数",
+    thDomAllowed: "許可",
+    thDomDenied: "遮断",
+    thWlStatus: "状態",
+    thWlDomain: "ドメイン",
+    thWlAction: "操作",
+    thAuditTime: "日時",
+    thAuditAction: "アクション",
+    thAuditIp: "クライアント IP",
+    thAuditDetails: "詳細",
+    statusAllBlocked: "ALL BLOCKED",
+    statusOnline: "ONLINE",
+    descBlocked: "現在の状態: 全通信緊急遮断中 (ALL BLOCKED)",
+    descOnline: "現在の状態: 全通信許可中 (ONLINE)",
+    btnUnblockMain: "🟢 遮断解除 (UNBLOCK)",
+    btnUnblockQuick: "🟢 遮断解除",
+    btnBlockMain: "🔴 緊急全通信遮断",
+    btnBlockQuick: "🔴 全遮断 (Killswitch)",
+    lastUpdatedPrefix: "最終更新",
+    btnEnabled: "🟢 有効",
+    btnDisabled: "⚪ 無効",
+    btnDelete: "🗑️ 削除",
+    confirmBlock: "すべての通信を緊急遮断しますか？",
+    confirmUnblock: "通信遮断を解除して通常運用に戻しますか？",
+    confirmDeleteDomain: (domain) => `ドメイン '${domain}' をホワイトリストから削除しますか？`,
+    loginTitle: "🔐 コントロールパネル ログイン",
+    placeholderPassword: "パスワードを入力",
+    btnLogin: "ログイン",
+    errAuthRequired: "認証が必要です",
+    errOccurred: "エラーが発生しました",
+    errPrefix: "エラー"
+  },
+  en: {
+    langBtnText: "🌐 日本語",
+    appTitle: "🎛️ Goose-in-the-Box Control Panel",
+    navReport: "📊 Audit Report",
+    navVnc: "🖥️ noVNC Desktop",
+    navDozzle: "📜 Dozzle Logs",
+    logoutBtn: "🚪 Logout",
+    tabBtnDashboard: "📊 Audit Dashboard",
+    tabBtnNetwork: "🔒 Traffic Control (Killswitch/WL)",
+    tabBtnAudit: "📋 Operation Audit",
+    lblTotalReq: "Total Requests",
+    lblAllowedReq: "Allowed Requests (ALLOWED)",
+    lblDeniedReq: "Denied Requests (DENIED)",
+    lblBlockRate: "Block Rate",
+    titleRecentDenied: "🚨 Recent Denied Requests",
+    titleTopDomains: "🌐 Top 10 Access Domains",
+    titleKillswitch: "🔴 Emergency Killswitch",
+    titleWhitelist: "📋 Whitelist Management (whitelist.txt)",
+    titleAudit: "📋 Control Panel Operation Audit Logs",
+    btnRefreshText: "🔄 Refresh",
+    btnReloadText: "🔄 Reload",
+    btnReloadSquid: "🔄 Squid Reconfigure",
+    btnAddDomain: "➕ Add",
+    placeholderAddDomain: "Add domain (e.g. .openai.com, github.com)",
+    loadingText: "Loading...",
+    noDeniedLogs: "No denied logs found.",
+    noData: "No data available.",
+    noWhitelist: "No domains in whitelist.",
+    noAuditLogs: "No operation audit history found.",
+    thDeniedTime: "Time",
+    thDeniedDomain: "Destination Domain",
+    thDeniedMethod: "Method",
+    thDeniedClient: "Client",
+    thDomDomain: "Domain",
+    thDomTotal: "Total",
+    thDomAllowed: "Allowed",
+    thDomDenied: "Denied",
+    thWlStatus: "Status",
+    thWlDomain: "Domain",
+    thWlAction: "Action",
+    thAuditTime: "Date/Time",
+    thAuditAction: "Action",
+    thAuditIp: "Client IP",
+    thAuditDetails: "Details",
+    statusAllBlocked: "ALL BLOCKED",
+    statusOnline: "ONLINE",
+    descBlocked: "Current Status: All Traffic Blocked (ALL BLOCKED)",
+    descOnline: "Current Status: All Traffic Allowed (ONLINE)",
+    btnUnblockMain: "🟢 Unblock All Traffic",
+    btnUnblockQuick: "🟢 Unblock",
+    btnBlockMain: "🔴 Emergency Block All",
+    btnBlockQuick: "🔴 Killswitch",
+    lastUpdatedPrefix: "Last Updated",
+    btnEnabled: "🟢 Enabled",
+    btnDisabled: "⚪ Disabled",
+    btnDelete: "🗑️ Delete",
+    confirmBlock: "Are you sure you want to block all network traffic?",
+    confirmUnblock: "Are you sure you want to unblock traffic and resume normal operation?",
+    confirmDeleteDomain: (domain) => `Are you sure you want to delete '${domain}' from the whitelist?`,
+    loginTitle: "🔐 Control Panel Login",
+    placeholderPassword: "Enter password",
+    btnLogin: "Login",
+    errAuthRequired: "Authentication required",
+    errOccurred: "An error occurred",
+    errPrefix: "Error"
+  }
+};
+
+function t(key, ...args) {
+  const dict = translations[currentLang] || translations.ja;
+  const val = dict[key] || translations.ja[key] || key;
+  if (typeof val === "function") {
+    return val(...args);
+  }
+  return val;
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem("app_lang", lang);
+  document.documentElement.lang = lang;
+  updateStaticLabels();
+  initData();
+}
+
+function toggleLanguage() {
+  setLanguage(currentLang === "ja" ? "en" : "ja");
+}
+
+function updateStaticLabels() {
+  const el = (id) => document.getElementById(id);
+
+  if (el("langToggleBtn")) el("langToggleBtn").innerText = t("langBtnText");
+  if (el("appTitle")) el("appTitle").innerText = t("appTitle");
+  if (el("navReport")) el("navReport").innerText = t("navReport");
+  if (el("navVnc")) el("navVnc").innerText = t("navVnc");
+  if (el("navDozzle")) el("navDozzle").innerText = t("navDozzle");
+  if (el("logoutBtn")) el("logoutBtn").innerText = t("logoutBtn");
+
+  if (el("tabBtnDashboard")) el("tabBtnDashboard").innerText = t("tabBtnDashboard");
+  if (el("tabBtnNetwork")) el("tabBtnNetwork").innerText = t("tabBtnNetwork");
+  if (el("tabBtnAudit")) el("tabBtnAudit").innerText = t("tabBtnAudit");
+
+  if (el("lblTotalReq")) el("lblTotalReq").innerText = t("lblTotalReq");
+  if (el("lblAllowedReq")) el("lblAllowedReq").innerText = t("lblAllowedReq");
+  if (el("lblDeniedReq")) el("lblDeniedReq").innerText = t("lblDeniedReq");
+  if (el("lblBlockRate")) el("lblBlockRate").innerText = t("lblBlockRate");
+
+  if (el("titleRecentDenied")) el("titleRecentDenied").innerHTML = `${t("titleRecentDenied")}`;
+  if (el("titleTopDomains")) el("titleTopDomains").innerHTML = `${t("titleTopDomains")}`;
+  if (el("titleKillswitch")) el("titleKillswitch").innerHTML = `${t("titleKillswitch")}`;
+  if (el("titleWhitelist")) el("titleWhitelist").innerHTML = `${t("titleWhitelist")}`;
+  if (el("titleAudit")) el("titleAudit").innerHTML = `${t("titleAudit")}`;
+
+  document.querySelectorAll(".btnRefreshText").forEach(e => e.innerText = t("btnRefreshText"));
+  document.querySelectorAll(".btnReloadText").forEach(e => e.innerText = t("btnReloadText"));
+  document.querySelectorAll(".loadingText").forEach(e => e.innerText = t("loadingText"));
+
+  if (el("btnReloadSquid")) el("btnReloadSquid").innerText = t("btnReloadSquid");
+  if (el("btnAddDomain")) el("btnAddDomain").innerText = t("btnAddDomain");
+  if (el("newDomainInput")) el("newDomainInput").placeholder = t("placeholderAddDomain");
+
+  if (el("thDeniedTime")) el("thDeniedTime").innerText = t("thDeniedTime");
+  if (el("thDeniedDomain")) el("thDeniedDomain").innerText = t("thDeniedDomain");
+  if (el("thDeniedMethod")) el("thDeniedMethod").innerText = t("thDeniedMethod");
+  if (el("thDeniedClient")) el("thDeniedClient").innerText = t("thDeniedClient");
+
+  if (el("thDomDomain")) el("thDomDomain").innerText = t("thDomDomain");
+  if (el("thDomTotal")) el("thDomTotal").innerText = t("thDomTotal");
+  if (el("thDomAllowed")) el("thDomAllowed").innerText = t("thDomAllowed");
+  if (el("thDomDenied")) el("thDomDenied").innerText = t("thDomDenied");
+
+  if (el("thWlStatus")) el("thWlStatus").innerText = t("thWlStatus");
+  if (el("thWlDomain")) el("thWlDomain").innerText = t("thWlDomain");
+  if (el("thWlAction")) el("thWlAction").innerText = t("thWlAction");
+
+  if (el("thAuditTime")) el("thAuditTime").innerText = t("thAuditTime");
+  if (el("thAuditAction")) el("thAuditAction").innerText = t("thAuditAction");
+  if (el("thAuditIp")) el("thAuditIp").innerText = t("thAuditIp");
+  if (el("thAuditDetails")) el("thAuditDetails").innerText = t("thAuditDetails");
+
+  if (el("loginModalTitle")) el("loginModalTitle").innerText = t("loginTitle");
+  if (el("passwordInput")) el("passwordInput").placeholder = t("placeholderPassword");
+  if (el("loginSubmitBtn")) el("loginSubmitBtn").innerText = t("btnLogin");
+}
 
 // API Helper
 async function apiCall(endpoint, options = {}) {
@@ -17,11 +231,11 @@ async function apiCall(endpoint, options = {}) {
     const response = await fetch(url, options);
     if (response.status === 401) {
       showLoginModal(true);
-      throw new Error("認証が必要です");
+      throw new Error(t("errAuthRequired"));
     }
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.detail || data.message || "エラーが発生しました");
+      throw new Error(data.detail || data.message || t("errOccurred"));
     }
     return data;
   } catch (err) {
@@ -133,27 +347,28 @@ async function loadKillswitchStatus() {
     if (isBlocked) {
       badge.className = "badge badge-blocked";
       statusDot.innerText = "🔴";
-      statusText.innerText = "ALL BLOCKED";
-      desc.innerText = "現在の状態: 全通信緊急遮断中 (ALL BLOCKED)";
+      statusText.innerText = t("statusAllBlocked");
+      desc.innerText = t("descBlocked");
       desc.style.color = "#f85149";
       mainBtn.className = "btn btn-success";
-      mainBtn.innerHTML = "🟢 遮断解除 (UNBLOCK)";
+      mainBtn.innerHTML = t("btnUnblockMain");
       quickBtn.className = "btn btn-success";
-      quickBtn.innerHTML = "🟢 遮断解除";
+      quickBtn.innerHTML = t("btnUnblockQuick");
     } else {
       badge.className = "badge badge-online";
       statusDot.innerText = "🟢";
-      statusText.innerText = "ONLINE";
-      desc.innerText = "現在の状態: 全通信許可中 (ONLINE)";
+      statusText.innerText = t("statusOnline");
+      desc.innerText = t("descOnline");
       desc.style.color = "#3fb950";
       mainBtn.className = "btn btn-danger";
-      mainBtn.innerHTML = "🔴 緊急全通信遮断";
+      mainBtn.innerHTML = t("btnBlockMain");
       quickBtn.className = "btn btn-danger";
-      quickBtn.innerHTML = "🔴 全遮断 (Killswitch)";
+      quickBtn.innerHTML = t("btnBlockQuick");
     }
 
     if (data.last_updated) {
-      lastUpdated.innerText = `最終更新: ${new Date(data.last_updated).toLocaleString("ja-JP")}`;
+      const dateLocale = currentLang === "ja" ? "ja-JP" : "en-US";
+      lastUpdated.innerText = `${t("lastUpdatedPrefix")}: ${new Date(data.last_updated).toLocaleString(dateLocale)}`;
     }
   } catch (err) {
     console.error("Killswitch status load failed:", err);
@@ -162,7 +377,7 @@ async function loadKillswitchStatus() {
 
 async function toggleKillswitch() {
   const isBlocking = currentKillswitchStatus === "online";
-  const actionText = isBlocking ? "すべての通信を緊急遮断しますか？" : "通信遮断を解除して通常運用に戻しますか？";
+  const actionText = isBlocking ? t("confirmBlock") : t("confirmUnblock");
   if (!confirm(actionText)) return;
 
   const endpoint = isBlocking ? "/api/killswitch/block" : "/api/killswitch/unblock";
@@ -172,7 +387,7 @@ async function toggleKillswitch() {
     await loadKillswitchStatus();
     loadDashboard();
   } catch (err) {
-    showNotification(`エラー: ${err.message}`, "error");
+    showNotification(`${t("errPrefix")}: ${err.message}`, "error");
   }
 }
 
@@ -186,20 +401,22 @@ async function loadDashboard() {
     const denied = summary.denied_requests ?? summary.denied ?? 0;
     const rate = summary.deny_rate_percent ?? summary.block_rate_pct ?? 0;
 
-    document.getElementById("statTotalRequests").innerText = total.toLocaleString();
-    document.getElementById("statAllowedRequests").innerText = allowed.toLocaleString();
-    document.getElementById("statDeniedRequests").innerText = denied.toLocaleString();
+    const dateLocale = currentLang === "ja" ? "ja-JP" : "en-US";
+
+    document.getElementById("statTotalRequests").innerText = total.toLocaleString(dateLocale);
+    document.getElementById("statAllowedRequests").innerText = allowed.toLocaleString(dateLocale);
+    document.getElementById("statDeniedRequests").innerText = denied.toLocaleString(dateLocale);
     document.getElementById("statBlockRate").innerText = `${rate}%`;
 
     // Render Recent Denied
     const deniedTbody = document.getElementById("recentDeniedTable");
     const recentDenied = data.recent_denials || data.recent_denied || [];
     if (recentDenied.length === 0) {
-      deniedTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">遮断ログはありません</td></tr>`;
+      deniedTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">${t("noDeniedLogs")}</td></tr>`;
     } else {
       deniedTbody.innerHTML = recentDenied.slice(0, 10).map(item => `
         <tr>
-          <td>${item.time ? new Date(item.time).toLocaleTimeString("ja-JP") : "-"}</td>
+          <td>${item.time ? new Date(item.time).toLocaleTimeString(dateLocale) : "-"}</td>
           <td style="color:#f85149; font-weight:600;">${item.domain || "-"}</td>
           <td><code>${item.method || "-"}</code></td>
           <td>${item.client || item.url || "-"}</td>
@@ -211,14 +428,14 @@ async function loadDashboard() {
     const domainsTbody = document.getElementById("topDomainsTable");
     const domains = data.top_domains || data.domains || [];
     if (domains.length === 0) {
-      domainsTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">データはありません</td></tr>`;
+      domainsTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">${t("noData")}</td></tr>`;
     } else {
       domainsTbody.innerHTML = domains.slice(0, 10).map(d => `
         <tr>
           <td><b>${d.domain}</b></td>
-          <td>${(d.count ?? d.total ?? 0).toLocaleString()}</td>
-          <td style="color:#3fb950;">${d.allowed !== undefined ? d.allowed.toLocaleString() : "-"}</td>
-          <td style="color:#f85149;">${d.denied !== undefined ? d.denied.toLocaleString() : "-"}</td>
+          <td>${(d.count ?? d.total ?? 0).toLocaleString(dateLocale)}</td>
+          <td style="color:#3fb950;">${d.allowed !== undefined ? d.allowed.toLocaleString(dateLocale) : "-"}</td>
+          <td style="color:#f85149;">${d.denied !== undefined ? d.denied.toLocaleString(dateLocale) : "-"}</td>
         </tr>
       `).join("");
     }
@@ -235,7 +452,7 @@ async function loadWhitelist() {
     const domains = data.domains || [];
 
     if (domains.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">ホワイトリストにドメインがありません</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">${t("noWhitelist")}</td></tr>`;
       return;
     }
 
@@ -243,14 +460,14 @@ async function loadWhitelist() {
       <tr>
         <td>
           <button class="btn ${d.enabled ? 'btn-success' : 'btn-secondary'}" onclick="toggleDomain('${d.domain}', ${!d.enabled})">
-            ${d.enabled ? '🟢 有効' : '⚪ 無効'}
+            ${d.enabled ? t('btnEnabled') : t('btnDisabled')}
           </button>
         </td>
         <td style="${!d.enabled ? 'text-decoration:line-through; color:var(--text-secondary);' : 'font-weight:600;'}">
           ${d.domain}
         </td>
         <td>
-          <button class="btn btn-danger" onclick="deleteDomain('${d.domain}')">🗑️ 削除</button>
+          <button class="btn btn-danger" onclick="deleteDomain('${d.domain}')">${t('btnDelete')}</button>
         </td>
       </tr>
     `).join("");
@@ -273,7 +490,7 @@ async function addDomain() {
     input.value = "";
     loadWhitelist();
   } catch (err) {
-    showNotification(`エラー: ${err.message}`, "error");
+    showNotification(`${t("errPrefix")}: ${err.message}`, "error");
   }
 }
 
@@ -286,12 +503,12 @@ async function toggleDomain(domain, enabled) {
     showNotification(res.message, "success");
     loadWhitelist();
   } catch (err) {
-    showNotification(`エラー: ${err.message}`, "error");
+    showNotification(`${t("errPrefix")}: ${err.message}`, "error");
   }
 }
 
 async function deleteDomain(domain) {
-  if (!confirm(`ドメイン '${domain}' をホワイトリストから削除しますか？`)) return;
+  if (!confirm(t("confirmDeleteDomain", domain))) return;
 
   try {
     const res = await apiCall(`/api/whitelist/${encodeURIComponent(domain)}`, {
@@ -300,7 +517,7 @@ async function deleteDomain(domain) {
     showNotification(res.message, "success");
     loadWhitelist();
   } catch (err) {
-    showNotification(`エラー: ${err.message}`, "error");
+    showNotification(`${t("errPrefix")}: ${err.message}`, "error");
   }
 }
 
@@ -309,7 +526,7 @@ async function reloadSquidConfig() {
     const res = await apiCall("/api/whitelist/reload", { method: "POST" });
     showNotification(res.message, res.squid_reloaded ? "success" : "error");
   } catch (err) {
-    showNotification(`エラー: ${err.message}`, "error");
+    showNotification(`${t("errPrefix")}: ${err.message}`, "error");
   }
 }
 
@@ -321,13 +538,15 @@ async function loadOperationAudit() {
     const ops = data.operations || [];
 
     if (ops.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">操作履歴はありません</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">${t("noAuditLogs")}</td></tr>`;
       return;
     }
 
+    const dateLocale = currentLang === "ja" ? "ja-JP" : "en-US";
+
     tbody.innerHTML = ops.map(op => `
       <tr>
-        <td>${op.time ? new Date(op.time).toLocaleString("ja-JP") : "-"}</td>
+        <td>${op.time ? new Date(op.time).toLocaleString(dateLocale) : "-"}</td>
         <td><code>${op.action || "-"}</code></td>
         <td>${op.source_ip || "-"}</td>
         <td>${op.details || "-"}</td>
@@ -354,5 +573,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (dozzle) {
     dozzle.href = '//' + window.location.hostname + ':8080/';
   }
+  updateStaticLabels();
   checkAuth();
 });

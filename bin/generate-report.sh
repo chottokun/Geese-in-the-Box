@@ -334,7 +334,9 @@ with open(md_path, "w", encoding="utf-8") as f:
     f.write("\n".join(md_lines))
 
 # 3. HTML 視覚ダッシュボード出力 (logs/report/index.html)
-# 人間向けモダンUI、自動更新、Dozzle / noVNC へのナビゲーションリンク付き
+# 人間向けモダンUI、自動更新、Dozzle / noVNC へのナビゲーションリンク付き、多言語切替(JP/EN)対応
+health_status_key = 'healthy' if '正常' in health_status else ('crit' if '異常' in health_status else 'warn')
+
 html_content = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -388,8 +390,9 @@ html_content = f"""<!DOCTYPE html>
         .badge-warn {{ background: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }}
         .badge-crit {{ background: rgba(248, 81, 73, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); }}
         
+        .header-actions {{ display: flex; align-items: center; gap: 12px; }}
         .nav-links {{ display: flex; gap: 12px; }}
-        .nav-link {{
+        .nav-link, .btn-lang {{
             color: var(--accent-blue);
             text-decoration: none;
             padding: 6px 14px;
@@ -399,8 +402,9 @@ html_content = f"""<!DOCTYPE html>
             font-size: 13px;
             font-weight: 500;
             transition: all 0.2s;
+            cursor: pointer;
         }}
-        .nav-link:hover {{ background: #21262d; border-color: var(--accent-blue); }}
+        .nav-link:hover, .btn-lang:hover {{ background: #21262d; border-color: var(--accent-blue); }}
         
         .meta-info {{ font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }}
         
@@ -462,26 +466,23 @@ html_content = f"""<!DOCTYPE html>
 
 <header>
     <h1>
-        <span>🛡️ Goose-in-the-Box 監査 & 可観測性ダッシュボード</span>
-        <span class="badge { 'badge-healthy' if '正常' in health_status else ('badge-crit' if '異常' in health_status else 'badge-warn') }">{health_status}</span>
+        <span id="titleText">🛡️ Goose-in-the-Box 監査 & 可観測性ダッシュボード</span>
+        <span id="healthBadge" class="badge badge-{ 'healthy' if health_status_key == 'healthy' else ('crit' if health_status_key == 'crit' else 'warn') }">{health_status}</span>
     </h1>
-    <div class="nav-links">
-        <a class="nav-link" href="/control/" style="border-color: var(--accent-blue); background: rgba(88, 166, 255, 0.15);">🎛️ コントロールパネル</a>
-        <a class="nav-link" href="/vnc.html" target="_blank">🖥️ noVNC 操作</a>
-        <a class="nav-link" id="dozzle-link" href="#" target="_blank" onclick="this.href='//' + window.location.hostname + ':8080/';">📜 Dozzle ログ</a>
-        <a class="nav-link" href="/report/api/status.json" target="_blank">🤖 JSON API</a>
-        <a class="nav-link" href="/report/api/summary.md" target="_blank">📝 Markdown</a>
+    <div class="header-actions">
+        <button id="langToggleBtn" class="btn-lang" onclick="toggleLanguage()">🌐 English</button>
+        <div class="nav-links">
+            <a class="nav-link" id="navControl" href="/control/" style="border-color: var(--accent-blue); background: rgba(88, 166, 255, 0.15);">🎛️ コントロールパネル</a>
+            <a class="nav-link" id="navVnc" href="/vnc.html" target="_blank">🖥️ noVNC 操作</a>
+            <a class="nav-link" id="dozzle-link" href="#" target="_blank" onclick="this.href='//' + window.location.hostname + ':8080/';"><span id="navDozzle">📜 Dozzle ログ</span></a>
+            <a class="nav-link" id="navJsonApi" href="/report/api/status.json" target="_blank">🤖 JSON API</a>
+            <a class="nav-link" id="navMarkdown" href="/report/api/summary.md" target="_blank">📝 Markdown</a>
+        </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {{
-            var dl = document.getElementById('dozzle-link');
-            if (dl) dl.href = '//' + window.location.hostname + ':8080/';
-        }});
-    </script>
 </header>
 
-<div class="meta-info">
-    集計期間: <code>{start_time or 'N/A'}</code> 〜 <code>{end_time or 'N/A'}</code> | 最終更新: <code>{now_iso}</code> (30秒毎に自動更新)
+<div class="meta-info" id="metaInfoArea">
+    <span id="lblMetaPeriod">集計期間</span>: <code>{start_time or 'N/A'}</code> 〜 <code>{end_time or 'N/A'}</code> | <span id="lblMetaLastUpdate">最終更新</span>: <code>{now_iso}</code> <span id="lblMetaAutoRefresh">(30秒毎に自動更新)</span>
 </div>
 """
 
@@ -492,42 +493,42 @@ for a in alerts:
 html_content += f"""
 <div class="grid">
     <div class="card">
-        <div class="card-label">総リクエスト</div>
+        <div class="card-label" id="lblTotalReq">総リクエスト</div>
         <div class="card-value">{total_requests:,}</div>
-        <div class="card-sub">Squid L7 プロキシ経由</div>
+        <div class="card-sub" id="subTotalReq">Squid L7 プロキシ経由</div>
     </div>
     <div class="card">
-        <div class="card-label">許可された通信</div>
+        <div class="card-label" id="lblAllowedReq">許可された通信</div>
         <div class="card-value" style="color: var(--accent-green);">{allowed_requests:,}</div>
-        <div class="card-sub">ホワイトリスト適合</div>
+        <div class="card-sub" id="subAllowedReq">ホワイトリスト適合</div>
     </div>
     <div class="card">
-        <div class="card-label">遮断された通信</div>
+        <div class="card-label" id="lblDeniedReq">遮断された通信</div>
         <div class="card-value" style="color: var(--accent-red);">{denied_requests:,}</div>
-        <div class="card-sub">遮断率: {deny_rate:.2f}%</div>
+        <div class="card-sub" id="subDeniedReq">遮断率: {deny_rate:.2f}%</div>
     </div>
     <div class="card">
-        <div class="card-label">LLM推定総コスト</div>
+        <div class="card-label" id="lblEstCost">LLM推定総コスト</div>
         <div class="card-value" style="color: var(--accent-purple);">¥{total_est_cost_jpy:,}</div>
-        <div class="card-sub">${total_est_cost_usd:.3f} USD (推定トークン: ~{total_est_tokens:,})</div>
+        <div class="card-sub" id="subEstCost">${total_est_cost_usd:.3f} USD (<span id="lblEstTokens">推定トークン</span>: ~{total_est_tokens:,})</div>
     </div>
 </div>
 
 <div class="section-title">
-    <span>🤖 LLM API 使用量・推定コスト内訳</span>
-    <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">※ TLS終端なしの概算値 (±50%誤差考慮)</span>
+    <span id="titleLlmSection">🤖 LLM API 使用量・推定コスト内訳</span>
+    <span id="subLlmSection" style="font-size: 12px; color: var(--text-muted); font-weight: normal;">※ TLS終端なしの概算値 (±50%誤差考慮)</span>
 </div>
 <table>
     <thead>
         <tr>
-            <th>プロバイダー</th>
-            <th>宛先ドメイン</th>
-            <th class="text-right">呼出回数</th>
-            <th class="text-right">推定入力トークン</th>
-            <th class="text-right">推定出力トークン</th>
-            <th class="text-right">推定コスト</th>
-            <th class="text-right">平均所要時間</th>
-            <th>備考</th>
+            <th id="thLlmProvider">プロバイダー</th>
+            <th id="thLlmDomain">宛先ドメイン</th>
+            <th id="thLlmCalls" class="text-right">呼出回数</th>
+            <th id="thLlmInput" class="text-right">推定入力トークン</th>
+            <th id="thLlmOutput" class="text-right">推定出力トークン</th>
+            <th id="thLlmCost" class="text-right">推定コスト</th>
+            <th id="thLlmDuration" class="text-right">平均所要時間</th>
+            <th id="thLlmNote">備考</th>
         </tr>
     </thead>
     <tbody>
@@ -548,7 +549,7 @@ if llm_provider_results:
         </tr>
 """
 else:
-    html_content += """<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">LLM API 通信履歴はありません</td></tr>"""
+    html_content += """<tr><td colspan="8" id="noLlmDataText" style="text-align:center; color:var(--text-muted);">LLM API 通信履歴はありません</td></tr>"""
 
 html_content += """
     </tbody>
@@ -556,9 +557,9 @@ html_content += """
 
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
     <div>
-        <div class="section-title">🌐 宛先ドメイン アクセス頻度 Top 10</div>
+        <div class="section-title" id="titleTopDomains">🌐 宛先ドメイン アクセス頻度 Top 10</div>
         <table>
-            <thead><tr><th>ドメイン</th><th class="text-right">回数</th></tr></thead>
+            <thead><tr><th id="thTopDomName">ドメイン</th><th id="thTopDomCount" class="text-right">回数</th></tr></thead>
             <tbody>
 """
 for d in top_domains[:10]:
@@ -569,9 +570,9 @@ html_content += """
         </table>
     </div>
     <div>
-        <div class="section-title">🧩 User-Agent 内訳 Top 8</div>
+        <div class="section-title" id="titleTopUa">🧩 User-Agent 内訳 Top 8</div>
         <table>
-            <thead><tr><th>User-Agent</th><th class="text-right">回数</th></tr></thead>
+            <thead><tr><th id="thTopUaName">User-Agent</th><th id="thTopUaCount" class="text-right">回数</th></tr></thead>
             <tbody>
 """
 for u in top_uas[:8]:
@@ -583,15 +584,15 @@ html_content += """
     </div>
 </div>
 
-<div class="section-title">🛑 遮断された通信 (直近 15 件)</div>
+<div class="section-title" id="titleRecentDenied">🛑 遮断された通信 (直近 15 件)</div>
 <table>
     <thead>
         <tr>
-            <th>時刻</th>
-            <th>メソッド</th>
-            <th>ドメイン</th>
-            <th>URL</th>
-            <th>ステータス</th>
+            <th id="thDeniedTime">時刻</th>
+            <th id="thDeniedMethod">メソッド</th>
+            <th id="thDeniedDomain">ドメイン</th>
+            <th id="thDeniedUrl">URL</th>
+            <th id="thDeniedStatus">ステータス</th>
         </tr>
     </thead>
     <tbody>
@@ -608,11 +609,177 @@ if recent_denials:
         </tr>
 """
 else:
-    html_content += """<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">遮断された通信はありません</td></tr>"""
+    html_content += """<tr><td colspan="5" id="noDeniedText" style="text-align:center; color:var(--text-muted);">遮断された通信はありません</td></tr>"""
 
-html_content += """
+html_content += f"""
     </tbody>
 </table>
+
+<script>
+    const reportTranslations = {{
+        ja: {{
+            langBtn: "🌐 English",
+            titleText: "🛡️ Goose-in-the-Box 監査 & 可観測性ダッシュボード",
+            healthStatus: "{health_status}",
+            navControl: "🎛️ コントロールパネル",
+            navVnc: "🖥️ noVNC 操作",
+            navDozzle: "📜 Dozzle ログ",
+            navJsonApi: "🤖 JSON API",
+            navMarkdown: "📝 Markdown",
+            metaPeriod: "集計期間",
+            metaLastUpdate: "最終更新",
+            metaAutoRefresh: "(30秒毎に自動更新)",
+            lblTotalReq: "総リクエスト",
+            subTotalReq: "Squid L7 プロキシ経由",
+            lblAllowedReq: "許可された通信",
+            subAllowedReq: "ホワイトリスト適合",
+            lblDeniedReq: "遮断された通信",
+            subDeniedReq: "遮断率",
+            lblEstCost: "LLM推定総コスト",
+            lblEstTokens: "推定トークン",
+            titleLlmSection: "🤖 LLM API 使用量・推定コスト内訳",
+            subLlmSection: "※ TLS終端なしの概算値 (±50%誤差考慮)",
+            thLlmProvider: "プロバイダー",
+            thLlmDomain: "宛先ドメイン",
+            thLlmCalls: "呼出回数",
+            thLlmInput: "推定入力トークン",
+            thLlmOutput: "推定出力トークン",
+            thLlmCost: "推定コスト",
+            thLlmDuration: "平均所要時間",
+            thLlmNote: "備考",
+            noLlmDataText: "LLM API 通信履歴はありません",
+            titleTopDomains: "🌐 宛先ドメイン アクセス頻度 Top 10",
+            thTopDomName: "ドメイン",
+            thTopDomCount: "回数",
+            titleTopUa: "🧩 User-Agent 内訳 Top 8",
+            thTopUaName: "User-Agent",
+            thTopUaCount: "回数",
+            titleRecentDenied: "🛑 遮断された通信 (直近 15 件)",
+            thDeniedTime: "時刻",
+            thDeniedMethod: "メソッド",
+            thDeniedDomain: "ドメイン",
+            thDeniedUrl: "URL",
+            thDeniedStatus: "ステータス",
+            noDeniedText: "遮断された通信はありません"
+        }},
+        en: {{
+            langBtn: "🌐 日本語",
+            titleText: "🛡️ Goose-in-the-Box Audit & Observability Dashboard",
+            healthStatus: "{'✅ Healthy' if health_status_key == 'healthy' else ('🚨 Critical' if health_status_key == 'crit' else '⚠️ Warning')}",
+            navControl: "🎛️ Control Panel",
+            navVnc: "🖥️ noVNC Desktop",
+            navDozzle: "📜 Dozzle Logs",
+            navJsonApi: "🤖 JSON API",
+            navMarkdown: "📝 Markdown",
+            metaPeriod: "Period",
+            metaLastUpdate: "Last Updated",
+            metaAutoRefresh: "(Auto refresh every 30s)",
+            lblTotalReq: "Total Requests",
+            subTotalReq: "Via Squid L7 Proxy",
+            lblAllowedReq: "Allowed Requests",
+            subAllowedReq: "Whitelist Matched",
+            lblDeniedReq: "Denied Requests",
+            subDeniedReq: "Deny Rate",
+            lblEstCost: "Est. Total LLM Cost",
+            lblEstTokens: "Est. Tokens",
+            titleLlmSection: "🤖 LLM API Usage & Estimated Cost",
+            subLlmSection: "* Estimated values without TLS termination (approx. ±50% margin of error)",
+            thLlmProvider: "Provider",
+            thLlmDomain: "Domain",
+            thLlmCalls: "Calls",
+            thLlmInput: "Est. Input Tokens",
+            thLlmOutput: "Est. Output Tokens",
+            thLlmCost: "Est. Cost",
+            thLlmDuration: "Avg Duration",
+            thLlmNote: "Note",
+            noLlmDataText: "No LLM API traffic history.",
+            titleTopDomains: "🌐 Top 10 Destination Domains",
+            thTopDomName: "Domain",
+            thTopDomCount: "Count",
+            titleTopUa: "🧩 Top 8 User-Agents",
+            thTopUaName: "User-Agent",
+            thTopUaCount: "Count",
+            titleRecentDenied: "🛑 Recent Denied Requests (Last 15)",
+            thDeniedTime: "Time",
+            thDeniedMethod: "Method",
+            thDeniedDomain: "Domain",
+            thDeniedUrl: "URL",
+            thDeniedStatus: "Status",
+            noDeniedText: "No denied requests found."
+        }}
+    }};
+
+    let reportLang = localStorage.getItem("app_lang") || "ja";
+
+    function updateReportLanguage() {{
+        const dict = reportTranslations[reportLang] || reportTranslations.ja;
+        const el = (id) => document.getElementById(id);
+
+        if (el("langToggleBtn")) el("langToggleBtn").innerText = dict.langBtn;
+        if (el("titleText")) el("titleText").innerText = dict.titleText;
+        if (el("healthBadge")) el("healthBadge").innerText = dict.healthStatus;
+
+        if (el("navControl")) el("navControl").innerText = dict.navControl;
+        if (el("navVnc")) el("navVnc").innerText = dict.navVnc;
+        if (el("navDozzle")) el("navDozzle").innerText = dict.navDozzle;
+        if (el("navJsonApi")) el("navJsonApi").innerText = dict.navJsonApi;
+        if (el("navMarkdown")) el("navMarkdown").innerText = dict.navMarkdown;
+
+        if (el("lblTotalReq")) el("lblTotalReq").innerText = dict.lblTotalReq;
+        if (el("subTotalReq")) el("subTotalReq").innerText = dict.subTotalReq;
+        if (el("lblAllowedReq")) el("lblAllowedReq").innerText = dict.lblAllowedReq;
+        if (el("subAllowedReq")) el("subAllowedReq").innerText = dict.subAllowedReq;
+        if (el("lblDeniedReq")) el("lblDeniedReq").innerText = dict.lblDeniedReq;
+        if (el("subDeniedReq")) el("subDeniedReq").innerText = `${{dict.subDeniedReq}}: {deny_rate:.2f}%`;
+        if (el("lblEstCost")) el("lblEstCost").innerText = dict.lblEstCost;
+        if (el("lblEstTokens")) el("lblEstTokens").innerText = dict.lblEstTokens;
+
+        if (el("lblMetaPeriod")) el("lblMetaPeriod").innerText = dict.metaPeriod;
+        if (el("lblMetaLastUpdate")) el("lblMetaLastUpdate").innerText = dict.metaLastUpdate;
+        if (el("lblMetaAutoRefresh")) el("lblMetaAutoRefresh").innerText = dict.metaAutoRefresh;
+
+        if (el("titleLlmSection")) el("titleLlmSection").innerText = dict.titleLlmSection;
+        if (el("subLlmSection")) el("subLlmSection").innerText = dict.subLlmSection;
+
+        if (el("thLlmProvider")) el("thLlmProvider").innerText = dict.thLlmProvider;
+        if (el("thLlmDomain")) el("thLlmDomain").innerText = dict.thLlmDomain;
+        if (el("thLlmCalls")) el("thLlmCalls").innerText = dict.thLlmCalls;
+        if (el("thLlmInput")) el("thLlmInput").innerText = dict.thLlmInput;
+        if (el("thLlmOutput")) el("thLlmOutput").innerText = dict.thLlmOutput;
+        if (el("thLlmCost")) el("thLlmCost").innerText = dict.thLlmCost;
+        if (el("thLlmDuration")) el("thLlmDuration").innerText = dict.thLlmDuration;
+        if (el("thLlmNote")) el("thLlmNote").innerText = dict.thLlmNote;
+        if (el("noLlmDataText")) el("noLlmDataText").innerText = dict.noLlmDataText;
+
+        if (el("titleTopDomains")) el("titleTopDomains").innerText = dict.titleTopDomains;
+        if (el("thTopDomName")) el("thTopDomName").innerText = dict.thTopDomName;
+        if (el("thTopDomCount")) el("thTopDomCount").innerText = dict.thTopDomCount;
+
+        if (el("titleTopUa")) el("titleTopUa").innerText = dict.titleTopUa;
+        if (el("thTopUaName")) el("thTopUaName").innerText = dict.thTopUaName;
+        if (el("thTopUaCount")) el("thTopUaCount").innerText = dict.thTopUaCount;
+
+        if (el("titleRecentDenied")) el("titleRecentDenied").innerText = dict.titleRecentDenied;
+        if (el("thDeniedTime")) el("thDeniedTime").innerText = dict.thDeniedTime;
+        if (el("thDeniedMethod")) el("thDeniedMethod").innerText = dict.thDeniedMethod;
+        if (el("thDeniedDomain")) el("thDeniedDomain").innerText = dict.thDeniedDomain;
+        if (el("thDeniedUrl")) el("thDeniedUrl").innerText = dict.thDeniedUrl;
+        if (el("thDeniedStatus")) el("thDeniedStatus").innerText = dict.thDeniedStatus;
+        if (el("noDeniedText")) el("noDeniedText").innerText = dict.noDeniedText;
+    }}
+
+    function toggleLanguage() {{
+        reportLang = reportLang === "ja" ? "en" : "ja";
+        localStorage.setItem("app_lang", reportLang);
+        updateReportLanguage();
+    }}
+
+    document.addEventListener('DOMContentLoaded', function() {{
+        var dl = document.getElementById('dozzle-link');
+        if (dl) dl.href = '//' + window.location.hostname + ':8080/';
+        updateReportLanguage();
+    }});
+</script>
 
 </body>
 </html>
