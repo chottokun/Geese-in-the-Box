@@ -87,6 +87,7 @@ audit-ingress:
 # HTML / JSON / Markdown 監査レポートの一括生成
 report:
 	@mkdir -p logs/report/api
+	@chmod -R a+r logs/ 2>/dev/null || sudo chmod -R a+r logs/ 2>/dev/null || true
 	@./bin/generate-report.sh
 	@echo "📊 ダッシュボードを生成しました:"
 	@echo "   - Web UI:   http://localhost:6080/report/"
@@ -96,6 +97,7 @@ report:
 # LLM 向け JSON レポートのみ stdout に出力 (LLMエージェント監視パイプライン用)
 report-json:
 	@mkdir -p logs/report/api
+	@chmod -R a+r logs/ 2>/dev/null || sudo chmod -R a+r logs/ 2>/dev/null || true
 	@./bin/generate-report.sh >/dev/null 2>&1
 	@cat logs/report/api/status.json
 

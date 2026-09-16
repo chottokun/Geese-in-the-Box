@@ -19,6 +19,10 @@ if [ ! -f "${LOG_FILE}" ]; then
     exit 1
 fi
 
+if [ ! -r "${LOG_FILE}" ]; then
+    chmod a+r "${LOG_FILE}" 2>/dev/null || sudo chmod a+r "${LOG_FILE}" 2>/dev/null || true
+fi
+
 if [ ! -f "${PRICING_FILE}" ]; then
     echo "エラー: 単価設定ファイル ${PRICING_FILE} が見つかりません。" >&2
     exit 1
