@@ -1,6 +1,10 @@
 # Goose-in-the-Box: AI エージェント完全通信制御＆監査サンドボックス
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Docker Compose](https://img.shields.io/badge/Docker_Compose-v2%2B-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+[![Goose](https://img.shields.io/badge/Goose-AI_Agent-orange)](https://block.github.io/goose/)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
 [English](README.en.md) | [日本語](README.md)
 
@@ -274,3 +278,10 @@ make unblock
    - L3/L4 内部隔離および L7 プロキシ経由の通信完全遮断テスト (`make test`)
    - 監査集計・ダッシュボード・JSON/Markdown API 生成の動作検証 (`make report`)
    - 監査ログ・レポート成果物の自動保存（GitHub Actions アーティファクト）
+
+---
+
+## ライセンス
+
+本プロジェクトは [MIT License](LICENSE) の下で公開されています。
+

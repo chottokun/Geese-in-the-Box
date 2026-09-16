@@ -1,6 +1,10 @@
 # Goose-in-the-Box: Complete Traffic Control & Audit Sandbox for AI Agents
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Docker Compose](https://img.shields.io/badge/Docker_Compose-v2%2B-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+[![Goose](https://img.shields.io/badge/Goose-AI_Agent-orange)](https://block.github.io/goose/)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
 [English](README.en.md) | [日本語](README.md)
 
@@ -282,3 +286,10 @@ This repository uses GitHub Actions to automatically run a dual-stage CI pipelin
    - End-to-end egress control tests via L3/L4 internal network & L7 proxy (`make test`)
    - Verification of audit summaries, observability dashboard, and JSON/Markdown APIs (`make report`)
    - Automated archiving of audit logs and report artifacts (GitHub Actions Artifacts)
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
