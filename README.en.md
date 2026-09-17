@@ -151,6 +151,9 @@ make gui
 
 ### Unified Web Control Panel (Killswitch & Traffic Management)
 A browser-based management UI allowing one-click emergency traffic killswitch, dynamic whitelist editing, and temporary access authorizations (TTL):
+
+![Goose-in-the-Box Unified Control Panel](docs/images/control-panel.png)
+
 ```bash
 make control
 ```
@@ -200,6 +203,8 @@ make audit-ingress
 
 ### Observability Dashboard & APIs for Humans and LLMs
 Analyzes Squid JSON logs (`/var/log/squid/access.json`) to generate human-readable Web Dashboards and structured JSON/Markdown APIs for LLM agents:
+
+![Goose-in-the-Box Audit & Observability Dashboard](docs/images/audit-dashboard.png)
 
 - `user_agent`: Identify tools and libraries making outbound requests
 - `bytes_sent` / `bytes_received`: Estimate LLM token usage and cost

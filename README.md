@@ -143,6 +143,9 @@ make gui
 
 ### 統合コントロールパネル Web UI (キルスイッチ & 通信制御)
 ブラウザからワンクリックで緊急キルスイッチの作動や、ドメインホワイトリストの動的編集・一時許可 (TTL) が行える統合コントロールパネルを利用できます：
+
+![Goose-in-the-Box 統合コントロールパネル](docs/images/control-panel.png)
+
 ```bash
 make control
 ```
@@ -192,6 +195,8 @@ make audit-ingress
 
 ### 監査ログ・LLM可観測性ダッシュボード & API
 Squid の JSON ログ (`/var/log/squid/access.json`) を解析し、**人間向け Web ダッシュボード**と **LLM 向け構造化 API (JSON / Markdown)** を一括生成・配信します：
+
+![Goose-in-the-Box 監査・可観測性ダッシュボード](docs/images/audit-dashboard.png)
 
 - `user_agent`: 通信を発生させたツールやライブラリの特定
 - `bytes_sent` / `bytes_received`: 送受信バイト数から LLM 消費トークン・コストを概算推計 (±50%目安)
