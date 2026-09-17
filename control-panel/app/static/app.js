@@ -78,6 +78,10 @@ const translations = {
     placeholderPassword: "パスワードを入力",
     btnLogin: "ログイン",
     errAuthRequired: "認証が必要です",
+    errInvalidPassword: "パスワードが正しくありません",
+    errEmptyDomain: "ドメイン名を入力してください",
+    errDomainExists: (dom) => `ドメイン '${dom}' は既に登録されています`,
+    errDomainNotFound: (dom) => `ドメイン '${dom}' が見つかりません`,
     errOccurred: "エラーが発生しました",
     errPrefix: "エラー"
   },
@@ -155,6 +159,10 @@ const translations = {
     placeholderPassword: "Enter password",
     btnLogin: "Login",
     errAuthRequired: "Authentication required",
+    errInvalidPassword: "Incorrect password",
+    errEmptyDomain: "Please enter a domain name",
+    errDomainExists: (dom) => `Domain '${dom}' is already registered`,
+    errDomainNotFound: (dom) => `Domain '${dom}' not found`,
     errOccurred: "An error occurred",
     errPrefix: "Error"
   }
@@ -167,6 +175,13 @@ function t(key, ...args) {
     return val(...args);
   }
   return val;
+}
+
+function getResponseMessage(data) {
+  if (!data) return "";
+  if (currentLang === "en" && data.message_en) return data.message_en;
+  if (currentLang === "ja" && data.message_ja) return data.message_ja;
+  return data.message_ja || data.message_en || data.message || "";
 }
 
 function setLanguage(lang) {
@@ -258,7 +273,16 @@ async function apiCall(endpoint, options = {}) {
     }
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.detail || data.message || t("errOccurred"));
+      let detail = data.detail || data.message || t("errOccurred");
+      if (detail === "auth_required") detail = t("errAuthRequired");
+      else if (detail === "invalid_password") detail = t("errInvalidPassword");
+      else if (detail === "empty_domain") detail = t("errEmptyDomain");
+      else if (typeof detail === "string" && detail.startsWith("domain_exists:")) {
+        detail = t("errDomainExists", detail.split(":")[1]);
+      } else if (typeof detail === "string" && detail.startsWith("domain_not_found:")) {
+        detail = t("errDomainNotFound", detail.split(":")[1]);
+      }
+      throw new Error(detail);
     }
     return data;
   } catch (err) {
@@ -406,7 +430,7 @@ async function toggleKillswitch() {
   const endpoint = isBlocking ? "/api/killswitch/block" : "/api/killswitch/unblock";
   try {
     const res = await apiCall(endpoint, { method: "POST" });
-    showNotification(res.message, "success");
+    showNotification(getResponseMessage(res), "success");
     await loadKillswitchStatus();
     loadDashboard();
   } catch (err) {
@@ -502,7 +526,7 @@ async function quickAllowDomain(domain, minutes) {
       });
     }
 
-    showNotification(res.message, "success");
+    showNotification(getResponseMessage(res), "success");
     loadWhitelist();
     loadDashboard();
   } catch (err) {
@@ -561,7 +585,7 @@ async function addDomain() {
       method: "POST",
       body: JSON.stringify({ domain })
     });
-    showNotification(res.message, "success");
+    showNotification(getResponseMessage(res), "success");
     input.value = "";
     loadWhitelist();
   } catch (err) {
@@ -575,7 +599,7 @@ async function toggleDomain(domain, enabled) {
       method: "PATCH",
       body: JSON.stringify({ enabled })
     });
-    showNotification(res.message, "success");
+    showNotification(getResponseMessage(res), "success");
     loadWhitelist();
   } catch (err) {
     showNotification(`${t("errPrefix")}: ${err.message}`, "error");
@@ -589,7 +613,7 @@ async function deleteDomain(domain) {
     const res = await apiCall(`/api/whitelist/${encodeURIComponent(domain)}`, {
       method: "DELETE"
     });
-    showNotification(res.message, "success");
+    showNotification(getResponseMessage(res), "success");
     loadWhitelist();
   } catch (err) {
     showNotification(`${t("errPrefix")}: ${err.message}`, "error");
@@ -599,7 +623,7 @@ async function deleteDomain(domain) {
 async function reloadSquidConfig() {
   try {
     const res = await apiCall("/api/whitelist/reload", { method: "POST" });
-    showNotification(res.message, res.squid_reloaded ? "success" : "error");
+    showNotification(getResponseMessage(res), res.squid_reloaded ? "success" : "error");
   } catch (err) {
     showNotification(`${t("errPrefix")}: ${err.message}`, "error");
   }

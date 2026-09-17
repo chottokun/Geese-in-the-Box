@@ -70,7 +70,9 @@ def block_all(request: Request):
 
     return {
         "status": "blocked",
-        "message": "全通信を緊急遮断しました (ALL BLOCKED)",
+        "message": "blocked_all",
+        "message_ja": "全通信を緊急遮断しました (ALL BLOCKED)",
+        "message_en": "Emergency block applied to all network traffic (ALL BLOCKED)",
         "squid_reloaded": reconfig_ok
     }
 
@@ -103,6 +105,8 @@ def unblock_all(request: Request):
 
     return {
         "status": "online",
-        "message": "通信遮断を解除しました (ONLINE)",
+        "message": "unblocked_all",
+        "message_ja": "通信遮断を解除しました (ONLINE)",
+        "message_en": "Traffic unblocked and resumed normal operation (ONLINE)",
         "squid_reloaded": reconfig_ok
     }

@@ -53,7 +53,7 @@ def get_current_user(
         token = cp_session
 
     if not is_valid_token(token):
-        raise HTTPException(status_code=401, detail="認証が必要です。ログインしてください。")
+        raise HTTPException(status_code=401, detail="auth_required")
     return True
 
 @router.get("/status", response_model=AuthStatusResponse)
@@ -74,10 +74,10 @@ def check_auth_status(request: Request, cp_session: Optional[str] = Cookie(None)
 @router.post("/login")
 def login(body: LoginRequest, response: Response):
     if not IS_AUTH_ENABLED:
-        return {"status": "ok", "message": "認証は無効化されています。"}
+        return {"status": "ok", "message": "auth_disabled", "message_ja": "認証は無効化されています。", "message_en": "Authentication is disabled."}
 
     if body.password != CONTROL_PANEL_PASSWORD:
-        raise HTTPException(status_code=401, detail="パスワードが正しくありません。")
+        raise HTTPException(status_code=401, detail="invalid_password")
 
     token = secrets.token_hex(32)
     SESSION_TOKENS[token] = time.time() + SESSION_DURATION_SECONDS
@@ -91,7 +91,7 @@ def login(body: LoginRequest, response: Response):
         max_age=SESSION_DURATION_SECONDS,
         path="/"
     )
-    return {"status": "ok", "token": token, "message": "ログインしました。"}
+    return {"status": "ok", "token": token, "message": "logged_in", "message_ja": "ログインしました。", "message_en": "Logged in successfully."}
 
 @router.post("/logout")
 def logout(response: Response, request: Request, cp_session: Optional[str] = Cookie(None)):
@@ -106,4 +106,4 @@ def logout(response: Response, request: Request, cp_session: Optional[str] = Coo
         del SESSION_TOKENS[token]
 
     response.delete_cookie("cp_session", path="/")
-    return {"status": "ok", "message": "ログアウトしました。"}
+    return {"status": "ok", "message": "logged_out", "message_ja": "ログアウトしました。", "message_en": "Logged out successfully."}

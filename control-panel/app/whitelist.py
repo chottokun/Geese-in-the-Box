@@ -99,12 +99,12 @@ def add_domain(body: AddDomainRequest, request: Request):
     client_ip = request.client.host if request.client else "unknown"
     domain = body.domain.strip()
     if not domain:
-        raise HTTPException(status_code=400, detail="ドメイン名を入力してください。")
+        raise HTTPException(status_code=400, detail="empty_domain")
 
     items, headers = parse_whitelist_file()
     for item in items:
         if item["domain"].lower() == domain.lower():
-            raise HTTPException(status_code=400, detail=f"ドメイン '{domain}' は既に登録されています。")
+            raise HTTPException(status_code=400, detail=f"domain_exists:{domain}")
 
     items.append({"domain": domain, "enabled": True})
     write_whitelist_items(items, headers)
@@ -117,7 +117,14 @@ def add_domain(body: AddDomainRequest, request: Request):
         client_ip=client_ip
     )
 
-    return {"status": "ok", "message": f"ドメイン '{domain}' を追加しました。", "squid_reloaded": reconfig_ok}
+    return {
+        "status": "ok",
+        "domain": domain,
+        "message": "domain_added",
+        "message_ja": f"ドメイン '{domain}' を追加しました。",
+        "message_en": f"Domain '{domain}' added.",
+        "squid_reloaded": reconfig_ok
+    }
 
 @router.post("/temporary", dependencies=[Depends(get_current_user)])
 def add_temporary_domain(body: AddTempDomainRequest, request: Request):
@@ -125,7 +132,7 @@ def add_temporary_domain(body: AddTempDomainRequest, request: Request):
     domain = body.domain.strip()
     duration = body.duration_minutes
     if not domain:
-        raise HTTPException(status_code=400, detail="ドメイン名を入力してください。")
+        raise HTTPException(status_code=400, detail="empty_domain")
 
     items, headers = parse_whitelist_file()
     existing_item = next((item for item in items if item["domain"].lower() == domain.lower()), None)
@@ -150,7 +157,11 @@ def add_temporary_domain(body: AddTempDomainRequest, request: Request):
 
     return {
         "status": "ok",
-        "message": f"ドメイン '{domain}' を {duration} 分間一時許可しました。",
+        "domain": domain,
+        "duration_minutes": duration,
+        "message": "temp_domain_added",
+        "message_ja": f"ドメイン '{domain}' を {duration} 分間一時許可しました。",
+        "message_en": f"Temporarily whitelisted '{domain}' for {duration} minutes.",
         "squid_reloaded": reconfig_ok,
         "temporary_info": temp_record
     }
@@ -164,7 +175,7 @@ def delete_domain(domain: str, request: Request):
     new_items = [item for item in items if item["domain"].lower() != domain.lower()]
 
     if len(new_items) == len(items):
-        raise HTTPException(status_code=404, detail=f"ドメイン '{domain}' が見つかりません。")
+        raise HTTPException(status_code=404, detail=f"domain_not_found:{domain}")
 
     write_whitelist_items(new_items, headers)
     remove_temp_domain(domain)
@@ -176,7 +187,14 @@ def delete_domain(domain: str, request: Request):
         client_ip=client_ip
     )
 
-    return {"status": "ok", "message": f"ドメイン '{domain}' を削除しました。", "squid_reloaded": reconfig_ok}
+    return {
+        "status": "ok",
+        "domain": domain,
+        "message": "domain_deleted",
+        "message_ja": f"ドメイン '{domain}' を削除しました。",
+        "message_en": f"Domain '{domain}' deleted.",
+        "squid_reloaded": reconfig_ok
+    }
 
 @router.patch("/{domain:path}", dependencies=[Depends(get_current_user)])
 def toggle_domain(domain: str, body: ToggleDomainRequest, request: Request):
@@ -192,7 +210,7 @@ def toggle_domain(domain: str, body: ToggleDomainRequest, request: Request):
             break
 
     if not found:
-        raise HTTPException(status_code=404, detail=f"ドメイン '{domain}' が見つかりません。")
+        raise HTTPException(status_code=404, detail=f"domain_not_found:{domain}")
 
     write_whitelist_items(items, headers)
     reconfig_ok, reconfig_msg = reconfigure_squid()
@@ -204,7 +222,19 @@ def toggle_domain(domain: str, body: ToggleDomainRequest, request: Request):
         client_ip=client_ip
     )
 
-    return {"status": "ok", "message": f"ドメイン '{domain}' を{state_str}しました。", "squid_reloaded": reconfig_ok}
+    msg_key = "domain_enabled" if body.enabled else "domain_disabled"
+    msg_ja = f"ドメイン '{domain}' を有効化しました。" if body.enabled else f"ドメイン '{domain}' を無効化しました。"
+    msg_en = f"Domain '{domain}' enabled." if body.enabled else f"Domain '{domain}' disabled."
+
+    return {
+        "status": "ok",
+        "domain": domain,
+        "enabled": body.enabled,
+        "message": msg_key,
+        "message_ja": msg_ja,
+        "message_en": msg_en,
+        "squid_reloaded": reconfig_ok
+    }
 
 @router.post("/reload", dependencies=[Depends(get_current_user)])
 def reload_squid_config(request: Request):
@@ -217,4 +247,13 @@ def reload_squid_config(request: Request):
         client_ip=client_ip
     )
 
-    return {"status": "ok", "message": reconfig_msg, "squid_reloaded": reconfig_ok}
+    msg_ja = "Squid 設定を再読み込みしました。" if reconfig_ok else "Squid 設定の再読み込みに失敗しました。"
+    msg_en = "Squid configuration reloaded successfully." if reconfig_ok else "Failed to reload Squid configuration."
+
+    return {
+        "status": "ok" if reconfig_ok else "error",
+        "message": reconfig_msg,
+        "message_ja": msg_ja,
+        "message_en": msg_en,
+        "squid_reloaded": reconfig_ok
+    }

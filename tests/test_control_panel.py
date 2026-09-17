@@ -57,7 +57,7 @@ def test_whitelist_crud(client):
     # POST add domain
     res = client.post("/api/whitelist", json={"domain": "pypi.org"})
     assert res.status_code == 200
-    assert "pypi.org" in res.json()["message"]
+    assert "pypi.org" in (res.json().get("message_ja", "") + res.json().get("domain", ""))
 
     # PATCH toggle domain (disable)
     res = client.patch("/api/whitelist/pypi.org", json={"enabled": False})
@@ -117,7 +117,7 @@ def test_temporary_whitelist_flow(client):
     res = client.post("/api/whitelist/temporary", json={"domain": "temp-api.example.com", "duration_minutes": 30})
     assert res.status_code == 200
     assert res.json()["status"] == "ok"
-    assert "30 分間一時許可" in res.json()["message"]
+    assert "30 分間一時許可" in res.json()["message_ja"]
 
     # 2. ホワイトリスト一覧で is_temporary=True および remaining_seconds を確認
     res = client.get("/api/whitelist")
