@@ -218,27 +218,35 @@ if deny_rate >= thresholds.get("deny_rate_crit_percent", 30.0):
     alerts.append({
         "type": "high_deny_rate",
         "severity": "critical",
-        "message": f"通信遮断率が危険域です ({deny_rate:.1f}% >= 30%)。不正なリクエストまたはホワイトリスト不備を確認してください。"
+        "message": f"通信遮断率が危険域です ({deny_rate:.1f}% >= 30%)。不正なリクエストまたはホワイトリスト不備を確認してください。",
+        "message_ja": f"通信遮断率が危険域です ({deny_rate:.1f}% >= 30%)。不正なリクエストまたはホワイトリスト不備を確認してください。",
+        "message_en": f"Deny rate critical ({deny_rate:.1f}% >= 30%). Check for illegal requests or missing whitelist entries."
     })
 elif deny_rate >= thresholds.get("deny_rate_warn_percent", 15.0):
     alerts.append({
         "type": "high_deny_rate",
         "severity": "warning",
-        "message": f"通信遮断率がやや高めです ({deny_rate:.1f}% >= 15%)。"
+        "message": f"通信遮断率がやや高めです ({deny_rate:.1f}% >= 15%)。",
+        "message_ja": f"通信遮断率がやや高めです ({deny_rate:.1f}% >= 15%)。",
+        "message_en": f"Deny rate high ({deny_rate:.1f}% >= 15%)."
     })
 
 if total_est_cost_usd >= thresholds.get("total_cost_warn_usd", 10.0):
     alerts.append({
         "type": "cost_spike",
         "severity": "warning",
-        "message": f"LLM推定利用コストが閾値を超過しました (${total_est_cost_usd:.2f} >= ${thresholds.get('total_cost_warn_usd'):.2f})。"
+        "message": f"LLM推定利用コストが閾値を超過しました (${total_est_cost_usd:.2f} >= ${thresholds.get('total_cost_warn_usd'):.2f})。",
+        "message_ja": f"LLM推定利用コストが閾値を超過しました (${total_est_cost_usd:.2f} >= ${thresholds.get('total_cost_warn_usd'):.2f})。",
+        "message_en": f"Estimated LLM usage cost exceeded threshold (${total_est_cost_usd:.2f} >= ${thresholds.get('total_cost_warn_usd'):.2f})."
     })
 
 if len(large_requests) > 0:
     alerts.append({
         "type": "large_transfer",
         "severity": "info",
-        "message": f"1MB以上の大容量送受信が {len(large_requests)} 件検出されました。"
+        "message": f"1MB以上の大容量送受信が {len(large_requests)} 件検出されました。",
+        "message_ja": f"1MB以上の大容量送受信が {len(large_requests)} 件検出されました。",
+        "message_en": f"Detected {len(large_requests)} large data transfers (>= 1MB)."
     })
 
 # トップドメイン・UserAgentの整理
@@ -486,9 +494,9 @@ html_content = f"""<!DOCTYPE html>
 </div>
 """
 
-for a in alerts:
+for idx, a in enumerate(alerts):
     sev_class = "alert-" + a["severity"]
-    html_content += f'<div class="alert-box {sev_class}">⚠️ <strong>[{a["type"]}]</strong> {a["message"]}</div>'
+    html_content += f'<div class="alert-box {sev_class}">⚠️ <strong>[{a["type"]}]</strong> <span class="alert-msg-text" data-ja="{a["message_ja"]}" data-en="{a["message_en"]}">{a["message_ja"]}</span></div>'
 
 html_content += f"""
 <div class="grid">
@@ -766,6 +774,11 @@ html_content += f"""
         if (el("thDeniedUrl")) el("thDeniedUrl").innerText = dict.thDeniedUrl;
         if (el("thDeniedStatus")) el("thDeniedStatus").innerText = dict.thDeniedStatus;
         if (el("noDeniedText")) el("noDeniedText").innerText = dict.noDeniedText;
+
+        document.querySelectorAll(".alert-msg-text").forEach(e => {{
+            const txt = reportLang === "en" ? e.getAttribute("data-en") : e.getAttribute("data-ja");
+            if (txt) e.innerText = txt;
+        }});
     }}
 
     function toggleLanguage() {{
