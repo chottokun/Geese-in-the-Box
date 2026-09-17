@@ -1,4 +1,4 @@
-.PHONY: build up-proxy down test session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control
+.PHONY: build up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
@@ -19,6 +19,10 @@ control: up-proxy
 	@echo " ブラウザで以下の URL を開いてください:"
 	@echo " 👉 http://localhost:6080/control/"
 	@echo "=========================================================="
+
+# コントロールパネルのユニットテスト実行 (uv / pytest)
+test-unit:
+	uv run --with pytest --with pytest-asyncio --with httpx --with fastapi pytest tests/
 
 # 全コンテナの停止
 down:

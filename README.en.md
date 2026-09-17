@@ -41,7 +41,10 @@ goose-in-the-box/
 │   ├── squid.conf           # Strict forward proxy rules + JSON audit log definitions
 │   └── whitelist.txt        # Allowed domain whitelist (LLMs, GitHub, PyPI, npm, etc.)
 ├── nginx/
-│   └── nginx.conf           # Ingress reverse proxy configuration (noVNC WebSocket / ACP proxy)
+│   └── nginx.conf           # Ingress reverse proxy configuration (noVNC WebSocket / ACP proxy / Control panel proxy)
+├── control-panel/           # Unified Web Control Panel (FastAPI backend & Web SPA frontend)
+│   ├── Dockerfile           # Standalone container definition for control panel
+│   └── app/                 # Backend API (killswitch, whitelist, TTL, audit) and static SPA files
 ├── goose/
 │   └── Dockerfile           # Goose Desktop/CLI + Xfce4/noVNC + Fcitx5 + uv/npm/tmux
 ├── bin/
@@ -145,6 +148,18 @@ make gui
 ```
 * Open **`http://localhost:6080/vnc.html`** in your browser to view and control the Xfce4 desktop environment inside the sandbox.
 * For native VNC clients, connect to `localhost:5900`.
+
+### Unified Web Control Panel (Killswitch & Traffic Management)
+A browser-based management UI allowing one-click emergency traffic killswitch, dynamic whitelist editing, and temporary access authorizations (TTL):
+```bash
+make control
+```
+* Access **`http://localhost:6080/control/`** in your browser
+* 📊 **Live Audit Dashboard**: Real-time request counts, allowed/denied metrics, deny rate, recent blocked logs, and Top 10 destination domains.
+* ⏳ **One-Click Temporary Whitelisting**: Grant 15-minute or 1-hour temporary exemptions (or permanent additions) directly from blocked logs, with automatic expiration and real-time TTL countdown.
+* 🔒 **Emergency Killswitch**: Instantly block or unblock all egress network traffic with a single click.
+* 🌐 **Multilingual Support (i18n)**: Switch effortlessly between Japanese and English via the header toggle (settings persist in `localStorage`).
+* 🔐 **Session Authentication**: Secured via `CONTROL_PANEL_PASSWORD` in `.env` (automatically bypassed when empty for local testing).
 
 ---
 
@@ -282,6 +297,7 @@ This repository uses GitHub Actions to automatically run a dual-stage CI pipelin
    - Docker Compose definition validation (`docker compose config --quiet`)
    - Embedded Python script syntax validation (AST parsing)
 2. **Traffic Isolation & Observability Integration Tests (`integration-tests`)**:
+   - Automated unit tests for control panel API (`make test-unit`)
    - Automated Docker container build
    - End-to-end egress control tests via L3/L4 internal network & L7 proxy (`make test`)
    - Verification of audit summaries, observability dashboard, and JSON/Markdown APIs (`make report`)

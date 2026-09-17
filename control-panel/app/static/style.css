@@ -91,6 +91,11 @@ header {
   gap: 12px;
 }
 
+#langToggleBtn {
+  font-size: 12px;
+  padding: 5px 12px;
+}
+
 .badge {
   padding: 5px 12px;
   border-radius: 4px;

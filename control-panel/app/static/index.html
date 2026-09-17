@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Goose-in-the-Box 統合コントロールパネル</title>
+  <title>Goose-in-the-Box コントロールパネル</title>
   <link rel="stylesheet" href="/control/static/style.css">
 </head>
 <body>
   <div class="container">
     <header>
       <div class="title-area">
-        <h1>🎛️ Goose-in-the-Box コントロールパネル</h1>
+        <h1 id="appTitle">🎛️ Goose-in-the-Box コントロールパネル</h1>
         <div class="header-nav-links">
-          <a class="nav-ext-link" href="/report/" target="_blank">📊 監査レポート</a>
-          <a class="nav-ext-link" href="/vnc.html" target="_blank">🖥️ noVNC 操作</a>
-          <a class="nav-ext-link" id="dozzleLink" href="#" target="_blank">📜 Dozzle ログ</a>
+          <a class="nav-ext-link" id="navReport" href="/report/" target="_blank">📊 監査レポート</a>
+          <a class="nav-ext-link" id="navVnc" href="/vnc.html" target="_blank">🖥️ noVNC 操作</a>
+          <a class="nav-ext-link" id="dozzleLink" href="#" target="_blank"><span id="navDozzle">📜 Dozzle ログ</span></a>
         </div>
       </div>
       <div class="header-status">
+        <button id="langToggleBtn" class="btn btn-secondary" onclick="toggleLanguage()">🌐 English</button>
         <div id="statusBadge" class="badge badge-online">
           <span id="statusDot">🟢</span> <span id="statusText">ONLINE</span>
         </div>
@@ -35,28 +36,28 @@
 
     <!-- Navigation Tabs -->
     <nav class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('dashboard')">📊 監査ダッシュボード</button>
-      <button class="tab-btn" onclick="switchTab('network')">🔒 通信制御 (キルスイッチ・WL)</button>
-      <button class="tab-btn" onclick="switchTab('audit')">📋 操作ログ</button>
+      <button id="tabBtnDashboard" class="tab-btn active" onclick="switchTab('dashboard')">📊 監査ダッシュボード</button>
+      <button id="tabBtnNetwork" class="tab-btn" onclick="switchTab('network')">🔒 通信制御 (キルスイッチ・WL)</button>
+      <button id="tabBtnAudit" class="tab-btn" onclick="switchTab('audit')">📋 操作ログ</button>
     </nav>
 
     <!-- TAB 1: 監査ダッシュボード -->
     <section id="tab-dashboard" class="tab-content active">
       <div class="stat-grid">
         <div class="stat-box">
-          <div class="lbl">総リクエスト数</div>
+          <div class="lbl" id="lblTotalReq">総リクエスト数</div>
           <div class="val" id="statTotalRequests">-</div>
         </div>
         <div class="stat-box">
-          <div class="lbl">許可リクエスト (ALLOWED)</div>
+          <div class="lbl" id="lblAllowedReq">許可リクエスト (ALLOWED)</div>
           <div class="val" style="color:#3fb950;" id="statAllowedRequests">-</div>
         </div>
         <div class="stat-box">
-          <div class="lbl">遮断リクエスト (DENIED)</div>
+          <div class="lbl" id="lblDeniedReq">遮断リクエスト (DENIED)</div>
           <div class="val" style="color:#f85149;" id="statDeniedRequests">-</div>
         </div>
         <div class="stat-box">
-          <div class="lbl">遮断率 (Block Rate)</div>
+          <div class="lbl" id="lblBlockRate">遮断率 (Block Rate)</div>
           <div class="val" style="color:#d29922;" id="statBlockRate">-</div>
         </div>
       </div>
@@ -64,22 +65,22 @@
       <div class="grid-2">
         <div class="card">
           <div class="card-title">
-            <span>🚨 直近の遮断 (DENIED) ログ</span>
-            <button class="btn btn-secondary" onclick="loadDashboard()">🔄 更新</button>
+            <span id="titleRecentDenied">🚨 直近の遮断 (DENIED) ログ</span>
+            <button class="btn btn-secondary" onclick="loadDashboard()"><span class="btnRefreshText">🔄 更新</span></button>
           </div>
           <div class="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>時刻</th>
-                  <th>宛先ドメイン</th>
-                  <th>メソッド</th>
-                  <th>クライアント</th>
-                  <th>操作</th>
+                  <th id="thDeniedTime">時刻</th>
+                  <th id="thDeniedDomain">宛先ドメイン</th>
+                  <th id="thDeniedMethod">メソッド</th>
+                  <th id="thDeniedClient">クライアント</th>
+                  <th id="thDeniedAction">操作</th>
                 </tr>
               </thead>
               <tbody id="recentDeniedTable">
-                <tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">読み込み中...</td></tr>
+                <tr><td colspan="5" style="text-align:center; color:var(--text-secondary);" class="loadingText">読み込み中...</td></tr>
               </tbody>
             </table>
           </div>
@@ -87,20 +88,20 @@
 
         <div class="card">
           <div class="card-title">
-            <span>🌐 ドメイン別アクセス Top 10</span>
+            <span id="titleTopDomains">🌐 ドメイン別アクセス Top 10</span>
           </div>
           <div class="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>ドメイン</th>
-                  <th>総数</th>
-                  <th>許可</th>
-                  <th>遮断</th>
+                  <th id="thDomDomain">ドメイン</th>
+                  <th id="thDomTotal">総数</th>
+                  <th id="thDomAllowed">許可</th>
+                  <th id="thDomDenied">遮断</th>
                 </tr>
               </thead>
               <tbody id="topDomainsTable">
-                <tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">読み込み中...</td></tr>
+                <tr><td colspan="4" style="text-align:center; color:var(--text-secondary);" class="loadingText">読み込み中...</td></tr>
               </tbody>
             </table>
           </div>
@@ -112,7 +113,7 @@
     <section id="tab-network" class="tab-content">
       <div class="card">
         <div class="card-title">
-          <span>🔴 緊急キルスイッチ (Killswitch)</span>
+          <span id="titleKillswitch">🔴 緊急キルスイッチ (Killswitch)</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
@@ -133,29 +134,29 @@
 
       <div class="card">
         <div class="card-title">
-          <span>📋 ドメインホワイトリスト管理 (whitelist.txt)</span>
+          <span id="titleWhitelist">📋 ドメインホワイトリスト管理 (whitelist.txt)</span>
           <div>
-            <button class="btn btn-secondary" onclick="reloadSquidConfig()">🔄 Squid 再設定 (reconfigure)</button>
-            <button class="btn btn-secondary" onclick="loadWhitelist()">🔄 再読み込み</button>
+            <button id="btnReloadSquid" class="btn btn-secondary" onclick="reloadSquidConfig()">🔄 Squid 再設定 (reconfigure)</button>
+            <button id="btnReloadWL" class="btn btn-secondary" onclick="loadWhitelist()"><span class="btnReloadText">🔄 再読み込み</span></button>
           </div>
         </div>
 
         <div class="form-group">
           <input type="text" id="newDomainInput" placeholder="許可ドメインを追加 (例: .openai.com, github.com)" onkeydown="if(event.key==='Enter') addDomain()">
-          <button class="btn btn-success" onclick="addDomain()">➕ 追加</button>
+          <button id="btnAddDomain" class="btn btn-success" onclick="addDomain()">➕ 追加</button>
         </div>
 
         <div class="table-wrapper">
           <table>
             <thead>
               <tr>
-                <th>状態</th>
-                <th>ドメイン</th>
-                <th>操作</th>
+                <th id="thWlStatus">状態</th>
+                <th id="thWlDomain">ドメイン</th>
+                <th id="thWlAction">操作</th>
               </tr>
             </thead>
             <tbody id="whitelistTable">
-              <tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">読み込み中...</td></tr>
+              <tr><td colspan="3" style="text-align:center; color:var(--text-secondary);" class="loadingText">読み込み中...</td></tr>
             </tbody>
           </table>
         </div>
@@ -166,21 +167,21 @@
     <section id="tab-audit" class="tab-content">
       <div class="card">
         <div class="card-title">
-          <span>📋 コントロールパネル操作監査ログ (control-panel-audit.json)</span>
-          <button class="btn btn-secondary" onclick="loadOperationAudit()">🔄 更新</button>
+          <span id="titleAudit">📋 コントロールパネル操作監査ログ (control-panel-audit.json)</span>
+          <button class="btn btn-secondary" onclick="loadOperationAudit()"><span class="btnRefreshText">🔄 更新</span></button>
         </div>
         <div class="table-wrapper">
           <table>
             <thead>
               <tr>
-                <th>日時</th>
-                <th>アクション</th>
-                <th>クライアント IP</th>
-                <th>詳細</th>
+                <th id="thAuditTime">日時</th>
+                <th id="thAuditAction">アクション</th>
+                <th id="thAuditIp">クライアント IP</th>
+                <th id="thAuditDetails">詳細</th>
               </tr>
             </thead>
             <tbody id="auditLogsTable">
-              <tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">読み込み中...</td></tr>
+              <tr><td colspan="4" style="text-align:center; color:var(--text-secondary);" class="loadingText">読み込み中...</td></tr>
             </tbody>
           </table>
         </div>
@@ -191,13 +192,13 @@
   <!-- Login Modal -->
   <div id="loginModal" class="modal-overlay" style="display:none;">
     <div class="modal-content">
-      <div class="modal-title">🔐 コントロールパネル ログイン</div>
+      <div id="loginModalTitle" class="modal-title">🔐 コントロールパネル ログイン</div>
       <div id="loginError" class="alert-msg alert-error" style="display:none;"></div>
       <form onsubmit="handleLogin(event)">
         <div class="form-group" style="margin-bottom:20px;">
           <input type="password" id="passwordInput" placeholder="パスワードを入力" required autofocus>
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:10px;">
+        <button id="loginSubmitBtn" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:10px;">
           ログイン
         </button>
       </form>

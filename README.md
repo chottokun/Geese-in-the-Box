@@ -40,7 +40,10 @@ goose-in-the-box/
 │   ├── squid.conf           # 厳格なフォワードプロキシ設定 + JSON構造化監査ログ定義
 │   └── whitelist.txt        # 許可ドメイン一覧（LLM, GitHub, PyPI, npm等）
 ├── nginx/
-│   └── nginx.conf           # Ingressリバースプロキシ設定 (noVNC WebSocket / ACP中継)
+│   └── nginx.conf           # Ingressリバースプロキシ設定 (noVNC WebSocket / ACP中継 / コントロールパネル中継)
+├── control-panel/           # 統合コントロールパネル (FastAPI バックエンド & Web SPA フロントエンド)
+│   ├── Dockerfile           # コントロールパネル用独立コンテナ定義
+│   └── app/                 # API (キルスイッチ・WL制御・TTL・監査) および SPA 静的ファイル
 ├── goose/
 │   └── Dockerfile           # Goose Desktop/CLI + Xfce4/noVNC + Fcitx5 + uv/npm/tmux
 ├── bin/
@@ -137,6 +140,18 @@ make gui
 ```
 * 起動後、ホストのブラウザで **`http://localhost:6080/vnc.html`** を開くと、隔離コンテナ内の Xfce4 デスクトップがそのままブラウザ上に表示されます。
 * VNC クライアントから接続する場合は `localhost:5900` にアクセスします。
+
+### 統合コントロールパネル Web UI (キルスイッチ & 通信制御)
+ブラウザからワンクリックで緊急キルスイッチの作動や、ドメインホワイトリストの動的編集・一時許可 (TTL) が行える統合コントロールパネルを利用できます：
+```bash
+make control
+```
+* **`http://localhost:6080/control/`** にアクセス
+* 📊 **リアルタイム監査ダッシュボード**: 総リクエスト、許可/遮断数、遮断率、直近の遮断ログ、ドメイン別 Top 10
+* ⏳ **ワンクリック一時ホワイトリスト化**: 遮断ログから 15分/1時間の一時許可または恒久許可をワンクリックで付与（自動失効・TTLカウントダウン付き）
+* 🔒 **緊急キルスイッチ**: 全通信即座遮断 / 解除
+* 🌐 **多言語対応 (i18n)**: 画面右上のトグルボタンで日本語・英語を即時切り替え可能（設定は自動保存）
+* 🔐 **セッション認証**: `.env` の `CONTROL_PANEL_PASSWORD` に基づく安全な認証（未設定時はローカル検証用に自動スキップ）
 
 ---
 
@@ -274,6 +289,7 @@ make unblock
    - Docker Compose 定義構文検証 (`docker compose config --quiet`)
    - 埋め込み Python スクリプト構文検証 (AST パース)
 2. **通信完全遮断 & 可観測性 実動テスト (`integration-tests`)**:
+   - コントロールパネルのユニットテスト自動実行 (`make test-unit`)
    - Docker コンテナの自動ビルド
    - L3/L4 内部隔離および L7 プロキシ経由の通信完全遮断テスト (`make test`)
    - 監査集計・ダッシュボード・JSON/Markdown API 生成の動作検証 (`make report`)
