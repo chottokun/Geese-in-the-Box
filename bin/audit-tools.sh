@@ -37,7 +37,7 @@ cmd_domains() {
     check_proxy
     echo "=== 送信先ドメイン集計 (頻度順トップ20) ==="
     docker compose exec -T "$PROXY_CONTAINER" cat "$LOG_PATH" 2>/dev/null \
-        | jq -r '.domain' | grep -v '^-$$' | sort | uniq -c | sort -rn | head -20 || echo "ログがまだありません"
+        | jq -r '.domain' | grep -v '^-$' | sort | uniq -c | sort -rn | head -20 || echo "ログがまだありません"
     echo ""
     echo "=== 送信先ドメイン集計 (転送量順・単位: Bytes) ==="
     docker compose exec -T "$PROXY_CONTAINER" cat "$LOG_PATH" 2>/dev/null \

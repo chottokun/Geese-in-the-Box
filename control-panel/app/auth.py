@@ -24,16 +24,26 @@ class AuthStatusResponse(BaseModel):
     auth_enabled: bool
     authenticated: bool
 
+def purge_expired_tokens() -> int:
+    """期限切れのセッショントークンを一括削除する"""
+    now = time.time()
+    expired = [t for t, exp in list(SESSION_TOKENS.items()) if now > exp]
+    for t in expired:
+        SESSION_TOKENS.pop(t, None)
+    return len(expired)
+
 def is_valid_token(token: Optional[str]) -> bool:
     if not IS_AUTH_ENABLED:
         return True
     if not token:
         return False
+    # アクセス時に期限切れトークンを定期クリーンアップ
+    purge_expired_tokens()
     expiry = SESSION_TOKENS.get(token)
     if not expiry:
         return False
     if time.time() > expiry:
-        del SESSION_TOKENS[token]
+        SESSION_TOKENS.pop(token, None)
         return False
     return True
 

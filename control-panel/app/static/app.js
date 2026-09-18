@@ -168,6 +168,16 @@ const translations = {
   }
 };
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function t(key, ...args) {
   const dict = translations[currentLang] || translations.ja;
   const val = dict[key] || translations.ja[key] || key;
@@ -459,23 +469,27 @@ async function loadDashboard() {
     const deniedTbody = document.getElementById("recentDeniedTable");
     const recentDenied = data.recent_denials || data.recent_denied || [];
     if (recentDenied.length === 0) {
-      deniedTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">${t("noDeniedLogs")}</td></tr>`;
+      deniedTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">${escapeHtml(t("noDeniedLogs"))}</td></tr>`;
     } else {
       deniedTbody.innerHTML = recentDenied.slice(0, 10).map(item => {
         const dom = item.domain || "";
         const isActionable = dom && dom !== "-" && !dom.includes(" ");
+        const safeDom = escapeHtml(dom);
+        const safeMethod = escapeHtml(item.method || "-");
+        const safeClient = escapeHtml(item.client || item.url || "-");
+        const safeTime = item.time ? escapeHtml(new Date(item.time).toLocaleTimeString(loc)) : "-";
         return `
         <tr>
-          <td>${item.time ? new Date(item.time).toLocaleTimeString(loc) : "-"}</td>
-          <td style="color:#f85149; font-weight:600;">${dom || "-"}</td>
-          <td><code>${item.method || "-"}</code></td>
-          <td>${item.client || item.url || "-"}</td>
+          <td>${safeTime}</td>
+          <td style="color:#f85149; font-weight:600;">${safeDom || "-"}</td>
+          <td><code>${safeMethod}</code></td>
+          <td>${safeClient}</td>
           <td>
             ${isActionable ? `
               <div class="quick-allow-group">
-                <button class="btn btn-temp btn-xs" title="${t("titleTemp15m")}" onclick="quickAllowDomain('${dom}', 15)">${t("btnTemp15m")}</button>
-                <button class="btn btn-temp btn-xs" title="${t("titleTemp1h")}" onclick="quickAllowDomain('${dom}', 60)">${t("btnTemp1h")}</button>
-                <button class="btn btn-secondary btn-xs" title="${t("titlePermanent")}" onclick="quickAllowDomain('${dom}', 0)">${t("btnPermanent")}</button>
+                <button class="btn btn-temp btn-xs" title="${escapeHtml(t("titleTemp15m"))}" data-domain="${safeDom}" data-mins="15" onclick="handleQuickAllow(this)">${escapeHtml(t("btnTemp15m"))}</button>
+                <button class="btn btn-temp btn-xs" title="${escapeHtml(t("titleTemp1h"))}" data-domain="${safeDom}" data-mins="60" onclick="handleQuickAllow(this)">${escapeHtml(t("btnTemp1h"))}</button>
+                <button class="btn btn-secondary btn-xs" title="${escapeHtml(t("titlePermanent"))}" data-domain="${safeDom}" data-mins="0" onclick="handleQuickAllow(this)">${escapeHtml(t("btnPermanent"))}</button>
               </div>
             ` : '-'}
           </td>
@@ -487,11 +501,11 @@ async function loadDashboard() {
     const domainsTbody = document.getElementById("topDomainsTable");
     const domains = data.top_domains || data.domains || [];
     if (domains.length === 0) {
-      domainsTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">${t("noData")}</td></tr>`;
+      domainsTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">${escapeHtml(t("noData"))}</td></tr>`;
     } else {
       domainsTbody.innerHTML = domains.slice(0, 10).map(d => `
         <tr>
-          <td><b>${d.domain}</b></td>
+          <td><b>${escapeHtml(d.domain)}</b></td>
           <td>${(d.count ?? d.total ?? 0).toLocaleString(loc)}</td>
           <td style="color:#3fb950;">${d.allowed !== undefined ? d.allowed.toLocaleString(loc) : "-"}</td>
           <td style="color:#f85149;">${d.denied !== undefined ? d.denied.toLocaleString(loc) : "-"}</td>
@@ -500,6 +514,14 @@ async function loadDashboard() {
     }
   } catch (err) {
     console.error("Dashboard load failed:", err);
+  }
+}
+
+function handleQuickAllow(btn) {
+  const domain = btn.dataset.domain;
+  const minutes = parseInt(btn.dataset.mins, 10);
+  if (domain !== undefined && !isNaN(minutes)) {
+    quickAllowDomain(domain, minutes);
   }
 }
 
@@ -543,7 +565,7 @@ async function loadWhitelist() {
     const loc = currentLang === "ja" ? "ja-JP" : "en-US";
 
     if (domains.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">${t("noWhitelist")}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">${escapeHtml(t("noWhitelist"))}</td></tr>`;
       return;
     }
 
@@ -552,27 +574,39 @@ async function loadWhitelist() {
       if (d.is_temporary && d.remaining_seconds !== null) {
         const minsLeft = Math.ceil(d.remaining_seconds / 60);
         const expTime = new Date(d.expires_at).toLocaleTimeString(loc);
-        badgeHtml = `<span class="badge badge-temp" title="${t("badgeTempExpires", expTime)}">${t("badgeTempRemaining", minsLeft)}</span>`;
+        badgeHtml = `<span class="badge badge-temp" title="${escapeHtml(t("badgeTempExpires", expTime))}">${escapeHtml(t("badgeTempRemaining", minsLeft))}</span>`;
       }
+      const safeDom = escapeHtml(d.domain);
 
       return `
       <tr>
         <td>
-          <button class="btn ${d.enabled ? 'btn-success' : 'btn-secondary'}" onclick="toggleDomain('${d.domain}', ${!d.enabled})">
-            ${d.enabled ? t("btnEnabled") : t("btnDisabled")}
+          <button class="btn ${d.enabled ? 'btn-success' : 'btn-secondary'}" data-domain="${safeDom}" data-enabled="${!d.enabled}" onclick="handleToggleDomain(this)">
+            ${escapeHtml(d.enabled ? t("btnEnabled") : t("btnDisabled"))}
           </button>
         </td>
         <td style="${!d.enabled ? 'text-decoration:line-through; color:var(--text-secondary);' : 'font-weight:600;'}">
-          ${d.domain} ${badgeHtml}
+          ${safeDom} ${badgeHtml}
         </td>
         <td>
-          <button class="btn btn-danger" onclick="deleteDomain('${d.domain}')">${t("btnDelete")}</button>
+          <button class="btn btn-danger" data-domain="${safeDom}" onclick="handleDeleteDomain(this)">${escapeHtml(t("btnDelete"))}</button>
         </td>
       </tr>
     `}).join("");
   } catch (err) {
     console.error("Whitelist load failed:", err);
   }
+}
+
+function handleToggleDomain(btn) {
+  const domain = btn.dataset.domain;
+  const enabled = btn.dataset.enabled === "true";
+  if (domain) toggleDomain(domain, enabled);
+}
+
+function handleDeleteDomain(btn) {
+  const domain = btn.dataset.domain;
+  if (domain) deleteDomain(domain);
 }
 
 async function addDomain() {
@@ -638,16 +672,16 @@ async function loadOperationAudit() {
     const loc = currentLang === "ja" ? "ja-JP" : "en-US";
 
     if (ops.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">${t("noAuditLogs")}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">${escapeHtml(t("noAuditLogs"))}</td></tr>`;
       return;
     }
 
     tbody.innerHTML = ops.map(op => `
       <tr>
-        <td>${op.time ? new Date(op.time).toLocaleString(loc) : "-"}</td>
-        <td><code>${op.action || "-"}</code></td>
-        <td>${op.source_ip || "-"}</td>
-        <td>${op.details || "-"}</td>
+        <td>${op.time ? escapeHtml(new Date(op.time).toLocaleString(loc)) : "-"}</td>
+        <td><code>${escapeHtml(op.action || "-")}</code></td>
+        <td>${escapeHtml(op.source_ip || "-")}</td>
+        <td>${escapeHtml(op.details || "-")}</td>
       </tr>
     `).join("");
   } catch (err) {

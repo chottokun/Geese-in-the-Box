@@ -151,3 +151,53 @@ def test_temporary_whitelist_flow(client):
     actions = [op["action"] for op in res.json()["operations"]]
     assert "whitelist_temporary_add" in actions
     assert "whitelist_temporary_expired" in actions
+
+def test_read_reverse_lines_and_log_filtering(client, tmp_path):
+    import json
+    logs_dir = tmp_path / "logs"
+    squid_log = logs_dir / "squid_access.json"
+    
+    # 複数行のダミーSquidログを書き込む
+    entries = [
+        {"time": "2026-09-18T10:00:00+09:00", "squid_status": "TCP_TUNNEL/200", "domain": "allowed1.com"},
+        {"time": "2026-09-18T10:01:00+09:00", "squid_status": "TCP_DENIED/403", "domain": "denied1.com"},
+        {"time": "2026-09-18T10:02:00+09:00", "squid_status": "TCP_TUNNEL/200", "domain": "allowed2.com"},
+        {"time": "2026-09-18T10:03:00+09:00", "squid_status": "TCP_DENIED/403", "domain": "denied2.com"}
+    ]
+    with open(squid_log, "w", encoding="utf-8") as f:
+        for e in entries:
+            f.write(json.dumps(e) + "\n")
+
+    # 全ログ取得（最新が先頭に来る）
+    res = client.get("/api/logs?limit=10")
+    assert res.status_code == 200
+    logs = res.json()["logs"]
+    assert len(logs) == 4
+    assert logs[0]["domain"] == "denied2.com"
+
+    # denied フィルタ
+    res_denied = client.get("/api/logs?filter=denied&limit=10")
+    assert res_denied.status_code == 200
+    denied_logs = res_denied.json()["logs"]
+    assert len(denied_logs) == 2
+    assert denied_logs[0]["domain"] == "denied2.com"
+    assert denied_logs[1]["domain"] == "denied1.com"
+
+def test_purge_expired_tokens():
+    import time
+    import app.auth as auth_mod
+
+    auth_mod.SESSION_TOKENS.clear()
+    now = time.time()
+    # 有効なトークン
+    auth_mod.SESSION_TOKENS["valid_token"] = now + 1000
+    # 期限切れトークン
+    auth_mod.SESSION_TOKENS["expired_token_1"] = now - 10
+    auth_mod.SESSION_TOKENS["expired_token_2"] = now - 50
+
+    purged = auth_mod.purge_expired_tokens()
+    assert purged == 2
+    assert "valid_token" in auth_mod.SESSION_TOKENS
+    assert "expired_token_1" not in auth_mod.SESSION_TOKENS
+    assert "expired_token_2" not in auth_mod.SESSION_TOKENS
+
