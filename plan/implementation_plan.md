@@ -1,9 +1,9 @@
-# Goose-in-the-Box: コンテナ完全通信制御＆監査サンドボックス 実装計画書 (v4)
+# Goose-in-the-Box: コンテナ通信制御＆監査サンドボックス 実装計画書 (v4)
 
 > **基本方針**:
 > ハイパーバイザー型 VM（Multipass 等）のような重厚な仮想化レイヤーは不要とし、**Docker コンテナ基盤** を採用する。
-> Docker の `internal: true` ネットワーク（L3/L4）と、Squid フォワードプロキシ（L7）の **2段構え** により、AI エージェントの勝手な外部通信を 100% 遮断し、全通信を構造化 JSON ログに記録・監査する。
-> さらに、**公式 Goose Desktop GUI（noVNC ブラウザ提供）**、**日本語入力環境（Fcitx5+Mozc）**、**MCP/パッケージ実行基盤（uv/uvx, npm/npx, pipx）**、および **成果物エクスポート** を備えた完全なスターター状態を提供する。
+> Docker の `internal: true` ネットワーク（L3/L4）と、Squid フォワードプロキシ（L7）の **多層防御** により、AI エージェントの未許可の外部通信を遮断し、全通信を構造化 JSON ログに記録・監査する。
+> さらに、**公式 Goose Desktop GUI（noVNC ブラウザ提供）**、**日本語入力環境（Fcitx5+Mozc）**、**MCP/パッケージ実行基盤（uv/uvx, npm/npx, pipx）**、および **成果物エクスポート** を備えたスターター環境を提供する。
 
 ---
 
@@ -79,13 +79,13 @@
   - Safe_ports に 11434 (Ollama) を許可。
   - パッケージリポジトリ（`pypi.org`, `files.pythonhosted.org`, `registry.npmjs.org`）の通信を許可。
   - ISO8601 タイムスタンプ付き構造化 JSON ログ（`/var/log/squid/access.json`）を常時出力。
-  - `make reload` による動的設定反映、`make block-all` / `make unblock` による完全キルスイッチ。
+  - `make reload` による動的設定反映、`make block-all` / `make unblock` による緊急キルスイッチ。
 
 ### (2) Ingress Reverse Proxy (Nginx)
 - **設定ファイル**: `nginx/nginx.conf`
 - **ポート**: `6080` (noVNC), `3284` (Goose ACP)
 - **機能**:
-  - WebSocket（`Upgrade`, `Connection "Upgrade"`）を完全サポート。
+  - WebSocket（`Upgrade`, `Connection "Upgrade"`）をサポート。
   - Docker 内部 DNS（`resolver 127.0.0.11`）による動的 upstream 解決（起動順序依存クラッシュの回避）。
 
 ### (3) Goose Agent Container (隔離作業環境)

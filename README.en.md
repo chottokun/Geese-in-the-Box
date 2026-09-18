@@ -1,4 +1,4 @@
-# Goose-in-the-Box: Complete Traffic Control & Audit Sandbox for AI Agents
+# Goose-in-the-Box: Network Isolation & Audit Sandbox for AI Agents
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -8,23 +8,203 @@
 
 [English](README.en.md) | [日本語](README.md)
 
-Goose-in-the-Box is a Docker-based, completely network-isolated and audited sandbox designed for safely running the AI agent "Goose".
+Goose-in-the-Box is a Docker-based network-isolated and audited sandbox designed for safely running the AI agent "Goose".
 
-With a **dual-layer defense mechanism** consisting of Docker's `internal: true` network (L3/L4) and a Squid forward proxy (L7), it 100% blocks unauthorized external communications and data exfiltration by AI agents. All connection attempts are recorded and audited in structured JSON logs. Additionally, Goose's anonymous telemetry transmission is disabled by default.
+With a **dual-layer defense mechanism** consisting of Docker's `internal: true` network (L3/L4) and a Squid forward proxy (L7), it prevents unauthorized external communications and data exfiltration by AI agents. All connection attempts are recorded and audited in structured JSON logs. Additionally, Goose's anonymous telemetry transmission is disabled by default.
 
 ---
 
 ## Key Features
 
-- 🔒 **Complete Elimination of Proxy Bypasses (L3/L4 Isolation)**:
+- 🔒 **Prevention of Proxy Bypasses (L3/L4 Isolation)**:
   - Agent containers reside within an `internal: true` network with no default gateway to the outside world.
   - Even if direct connection attempts (e.g., direct IP hits or DNS leaks) bypassing proxy configurations are made, the Linux kernel immediately drops the packets (`Network unreachable`).
 - 🛡️ **Strict Whitelist Control (L7 Control)**:
   - The Squid proxy acts as the sole outbound gateway, allowing traffic only to domains listed in `squid/whitelist.txt`. Unapproved domains are blocked immediately with `403 Forbidden`.
 - 📊 **Structured JSON Audit Logging**:
   - All network events (allowed, denied, HTTP status, domain, transferred bytes) are logged with ISO 8601 timestamps in `/var/log/squid/access.json`, enabling fast CLI filtering and aggregation.
-- 🚫 **Mandatory Telemetry Suppression**:
+- 🚫 **Telemetry Suppression**:
   - `GOOSE_TELEMETRY_ENABLED=false` is enforced to prevent the agent from sending telemetry data.
+
+---
+
+## Security Boundaries & Non-Goals
+
+This sandbox is engineered to minimize the operational risks of autonomous AI agents. Please review the following guarantees and non-goals (out-of-scope items) before deployment:
+
+### Security Guarantees
+- 🔒 **Network Isolation (L3/L4 & L7)**: Docker's `internal: true` network removes default gateways to prevent direct packet routing. All outbound requests must transit the Squid forward proxy, where access is strictly confined to domains in the whitelist.
+- 🛡️ **Non-Privileged Execution**: Containers do not run in privileged mode (`--privileged`) and execute under standard non-root user privileges (UID/GID 1000).
+- 🚫 **No Docker Socket in Agent Container**: The host's Docker socket (`/var/run/docker.sock`) is never mounted inside the agent container (`goose-agent`), preventing agents from executing Docker commands on the host (management services `control-panel` and `dozzle` mount it read-only `:ro` strictly for container status and logs).
+- 📁 **Restricted File Scope**: Host-shared files are strictly limited to `./workspace/` and designated config/log volumes. The agent cannot traverse or access the host's root file system or user home directories.
+
+### Non-Goals (Out of Scope)
+- ⚠️ **Host Kernel Zero-Day Exploits**: Because containers share the host Linux kernel, container escape attacks exploiting low-level kernel vulnerabilities are out of scope. For high-risk environments, running this sandbox inside a dedicated virtual machine (VM) is recommended.
+- 🔍 **Deep Packet Inspection / SSL Decryption**: This sandbox does not decrypt HTTPS payloads (no MITM / SSL Bump). Traffic routing and audit logging rely on connection metadata (destination domain, port, byte volume, duration) via HTTP CONNECT tunneling, avoiding private CA certificate injection.
+
+---
+
+## Quick Start
+
+### 1. Environment Setup
+```bash
+cp .env.example .env
+```
+> [!TIP]
+> Open `.env` and set the API key for your preferred LLM provider (OpenAI, Anthropic, Gemini, Groq, etc.). If you are exclusively using Ollama (local LLM) on the host, no API keys are required.
+
+### 2. Build Container Images
+```bash
+make build
+```
+
+### 3. Run Automated Isolation Test
+Execute the test suite from inside the sandbox to verify that network controls are functioning as intended:
+```bash
+make test
+```
+**Test Coverage:**
+1. ✅ **Whitelisted Domain (`api.openai.com`)**: Connects successfully through proxy
+2. 🛑 **Unapproved Domain (`www.google.com`)**: Blocked with `403 Forbidden` by Squid
+3. 🔒 **Direct Connection Bypass**: Dropped with `Network unreachable` via Docker `internal: true`
+
+### 4. Running Goose (3 Execution Modes)
+Once the tests pass, launch Goose in one of the following modes depending on your workflow:
+
+- **Interactive CLI Session (Recommended & Fastest)**:
+  ```bash
+  make session
+  ```
+  Starts an interactive Goose CLI in your terminal, synchronized with `./workspace/` on the host, automatically loading `workspace/AGENTS.md` and `.agents/` rules.
+
+- **In-Container Browser Desktop (UI Inspection & Web Browsing)**:
+  ```bash
+  make gui
+  ```
+  Open **`http://localhost:6080/vnc.html`** in your browser to view and control the Xfce4 virtual desktop inside the sandbox (or connect via native VNC to `localhost:5900`). Ideal when you want the agent to use browser tools or when inspecting full graphical outputs.
+
+- **Goose Desktop Integration (Connect Host GUI Application)**:
+  ```bash
+  make serve
+  ```
+  Launches the Agent Communication Protocol (ACP) server. Connect your host Goose Desktop application to `http://localhost:3284`.
+
+### 5. Teardown & Stopping Containers
+To stop all running sandbox containers and free resources:
+```bash
+make down
+```
+
+---
+
+## Sandbox Monitoring & Traffic Management
+
+Goose-in-the-Box provides both intuitive **browser-based Web UIs** and terminal-friendly **CLI commands** for monitoring and controlling agent traffic.
+
+### 1. Unified Web Management (Recommended)
+
+#### 🎛️ Unified Control Panel (`make control`)
+A centralized management dashboard to operate the emergency killswitch, modify domain whitelists dynamically, and manage temporary access authorizations (TTL):
+
+![Goose-in-the-Box Unified Control Panel](docs/images/control-panel-en.png)
+
+```bash
+make control
+```
+* **Access URL**: `http://localhost:6080/control/`
+* 🔒 **Emergency Killswitch**: Instantly block or unblock all outbound agent network traffic with one click
+* ⏳ **One-Click Temporary Whitelisting**: Grant 15-minute or 1-hour exemptions (or permanent additions) directly from blocked logs with real-time TTL countdown
+* 📊 **Live Audit Dashboard**: Total requests, allowed/denied counts, deny rate, recent blocked logs, Top 10 destination domains
+* 🌐 **Multilingual (i18n)** & 🔐 **Session Authentication** (via `CONTROL_PANEL_PASSWORD` in `.env`)
+
+#### 📋 Dozzle Real-time Log Viewer
+* **Access URL**: `http://<HOST_IP>:8080` (e.g., `http://localhost:8080`)
+* Filter and search container logs cleanly without health check noise by selecting the `egress-proxy` container.
+
+#### 📊 Observability Dashboard & APIs
+Squid JSON logs (`/var/log/squid/access.json`) are automatically analyzed in the background (every 30 seconds) to provide human and LLM visibility:
+
+![Goose-in-the-Box Audit & Observability Dashboard](docs/images/audit-dashboard-en.png)
+
+* **Web UI Dashboard**: `http://<HOST_IP>:6080/report/` (Auto-refreshes every 30s with traffic volume, latency, and alert status)
+* 🤖 **LLM JSON API**: `http://<HOST_IP>:6080/report/api/status.json` (Structured JSON for curl or LLM automated parsing)
+* 📝 **LLM Markdown Summary**: `http://<HOST_IP>:6080/report/api/summary.md` (Context-optimized concise text summary)
+* **Token & Cost Estimates (Experimental)**: Because HTTPS payloads are not decrypted, precise token counting is not feasible; values are rough order-of-magnitude estimates derived from transfer byte volumes for general reference.
+* ⚙️ **Rate & Threshold Rules**: Configurable via `config/llm-pricing.json`
+
+---
+
+### 2. CLI Audit & Control Commands
+
+Commands for terminal management and scripting pipelines:
+
+| Command | Description |
+| :--- | :--- |
+| **`make logs`** | Stream real-time structured JSON audit logs |
+| **`make watch`** | Real-time terminal color alerts for blocked connections (403 DENIED) |
+| **`make audit-denied`** | List blocked domains and URLs from audit logs |
+| **`make audit-summary`** | Summarize access frequency and byte transfer by destination domain |
+| **`make audit-ingress`** | View incoming connection history to noVNC and ACP server |
+| **`make audit-history`** | Cross-session comparison across rotated logs |
+| **`make reload`** | Reload Squid configuration after editing `squid/whitelist.txt` without dropping connections |
+| **`make block-all`** | **Emergency Killswitch**: Cut off all outbound traffic immediately |
+| **`make unblock`** | Restore outbound traffic from backup whitelist |
+| **`make report`** | Manually generate observability report and JSON/Markdown APIs |
+| **`make log-rotate`** | Manually trigger Squid audit log rotation |
+```
+
+---
+
+## Starter Environment & MCP Infrastructure
+
+The sandbox includes pre-configured tooling and environments so AI agents can autonomously write code and interact with Model Context Protocol (MCP) servers:
+
+1. **Core Utilities & Pre-configured Git**:
+   - `git` pre-configured with `user.name` (Goose Agent), `user.email`, `safe.directory`, and `defaultBranch`.
+   - `tmux` (background session persistence and mouse support enabled).
+   - Core CLI tools: `build-essential` (make, gcc, etc.), `wget`, `unzip`, `nano`, `less`, `htop`, `tree`.
+2. **Runtimes & MCP Infrastructure**:
+   - **Python 3.11** + **`uv` / `uvx`**: Ultra-fast package management and on-demand MCP server execution.
+   - **`pipx`**: Isolated CLI tool execution environment.
+   - **Node.js** + **`npm` / `npx`**: Platform for running TypeScript/JavaScript MCP servers.
+3. **Official Project Instructions (`.goosehints`)**:
+   - Located at `/workspace/.goosehints`, defining recommended guidelines for agent execution.
+
+---
+
+## Workspace Sharing & Artifact Export
+
+1. **Real-time Host Synchronization (Bind Mount)**:
+   - Any files created or modified by Goose inside `/workspace` are immediately synchronized to `./workspace/` on the host machine.
+2. **Artifact Export**:
+   - Export workspace artifacts into a timestamped tar.gz archive:
+     ```bash
+     make export-workspace
+     ```
+     Archives are saved to `exports/workspace_YYYYMMDD_HHMMSS.tar.gz`.
+
+---
+
+## Configuration Parameters (.env)
+
+All environment variables are centrally managed via the `.env` file (refer to `.env.example`).
+
+| Parameter | Description | Default Value |
+| :--- | :--- | :--- |
+| **`HOST_BIND`** | Host IP binding configuration (`0.0.0.0` for all, `127.0.0.1` for local only) | `0.0.0.0` |
+| **`OPENAI_API_KEY` etc.** | API keys for various LLM providers | (empty) |
+| **`OPENAI_BASE_URL`** | OpenAI-compatible base URL (no trailing slash) | `https://api.openai.com/v1` |
+| **`OPENAI_HOST`** | OpenAI-compatible hostname for provider resolution | `https://api.openai.com` |
+| **`OLLAMA_HOST`** | Local LLM host endpoint (port 11434) | `http://host.docker.internal:11434` |
+| **`NOVNC_PORT`** | noVNC Web UI port (browser access) | `6080` |
+| **`GOOSE_SERVE_PORT`** | Goose ACP server listening port | `3284` |
+| **`SQUID_PORT`** | Squid proxy listening port | `3128` |
+| **`DOZZLE_PORT`** | Dozzle real-time log viewer Web port | `8080` |
+| **`RESOLUTION`** | Virtual desktop screen resolution | `1280x800x24` |
+| **`TZ`** | System timezone for logs and clock | `Asia/Tokyo` |
+| **`SHM_SIZE`** | Shared memory size for virtual desktop stability | `1gb` |
+| **`UID` / `GID`** | User ID / Group ID inside the container | `1000` / `1000` |
+| **`GOOSE_TELEMETRY_ENABLED`** | Toggle for anonymous usage telemetry | `false` |
 
 ---
 
@@ -75,219 +255,6 @@ goose-in-the-box/
 │   └── report/              # Dashboard Web UI and API outputs
 └── plan/                    # Implementation and architecture documentation
 ```
-
----
-
-## Configuration Parameters (.env)
-
-All environment variables are centrally managed via the `.env` file (refer to `.env.example`).
-
-| Parameter | Description | Default Value |
-| :--- | :--- | :--- |
-| **`HOST_BIND`** | Host IP binding configuration (`0.0.0.0` for all, `127.0.0.1` for local only) | `0.0.0.0` |
-| **`OPENAI_API_KEY` etc.** | API keys for various LLM providers | (empty) |
-| **`OPENAI_BASE_URL`** | OpenAI-compatible base URL (no trailing slash) | `https://api.openai.com/v1` |
-| **`OPENAI_HOST`** | OpenAI-compatible hostname for provider resolution | `https://api.openai.com` |
-| **`OLLAMA_HOST`** | Local LLM host endpoint (port 11434) | `http://host.docker.internal:11434` |
-| **`NOVNC_PORT`** | noVNC Web UI port (browser access) | `6080` |
-| **`GOOSE_SERVE_PORT`** | Goose ACP server listening port | `3284` |
-| **`SQUID_PORT`** | Squid proxy listening port | `3128` |
-| **`DOZZLE_PORT`** | Dozzle real-time log viewer Web port | `8080` |
-| **`RESOLUTION`** | Virtual desktop screen resolution | `1280x800x24` |
-| **`TZ`** | System timezone for logs and clock | `Asia/Tokyo` |
-| **`SHM_SIZE`** | Shared memory size for virtual desktop stability | `1gb` |
-| **`UID` / `GID`** | User ID / Group ID inside the container | `1000` / `1000` |
-| **`GOOSE_TELEMETRY_ENABLED`** | Toggle for anonymous usage telemetry | `false` |
-
----
-
-## Quick Start
-
-### 1. Environment Setup
-```bash
-cp .env.example .env
-# Edit .env to set your API keys and configuration
-```
-
-### 2. Build Container Images
-```bash
-make build
-```
-
-### 3. Run Automated Isolation Test
-Execute the test suite from inside the sandbox to verify that network controls are functioning as intended:
-```bash
-make test
-```
-**Test Coverage:**
-1. ✅ **Whitelisted Domain (`api.openai.com`)**: Connects successfully through proxy
-2. 🛑 **Unapproved Domain (`www.google.com`)**: Blocked with `403 Forbidden` by Squid
-3. 🔒 **Direct Connection Bypass**: Dropped with `Network unreachable` via Docker `internal: true`
-
----
-
-## Running Goose
-
-### Interactive CLI Session
-Starts an interactive Goose CLI session inside the isolated container, automatically loading `workspace/AGENTS.md` and `.agents/rules/*.md`:
-```bash
-make session
-```
-
-### Connection with Goose Desktop (Host GUI)
-Launches the Agent Communication Protocol (ACP) server so host-side Goose Desktop can connect:
-```bash
-make serve
-```
-* Connection endpoint for host Goose Desktop: `http://localhost:3284`
-
-### In-Container GUI Desktop (noVNC Browser Control)
-To enable agent web browsing or inspect the full container desktop UI:
-```bash
-make gui
-```
-* Open **`http://localhost:6080/vnc.html`** in your browser to view and control the Xfce4 desktop environment inside the sandbox.
-* For native VNC clients, connect to `localhost:5900`.
-
-### Unified Web Control Panel (Killswitch & Traffic Management)
-A browser-based management UI allowing one-click emergency traffic killswitch, dynamic whitelist editing, and temporary access authorizations (TTL):
-
-![Goose-in-the-Box Unified Control Panel](docs/images/control-panel-en.png)
-
-```bash
-make control
-```
-* Access **`http://localhost:6080/control/`** in your browser
-* 📊 **Live Audit Dashboard**: Real-time request counts, allowed/denied metrics, deny rate, recent blocked logs, and Top 10 destination domains.
-* ⏳ **One-Click Temporary Whitelisting**: Grant 15-minute or 1-hour temporary exemptions (or permanent additions) directly from blocked logs, with automatic expiration and real-time TTL countdown.
-* 🔒 **Emergency Killswitch**: Instantly block or unblock all egress network traffic with a single click.
-* 🌐 **Multilingual Support (i18n)**: Switch effortlessly between Japanese and English via the header toggle (settings persist in `localStorage`).
-* 🔐 **Session Authentication**: Secured via `CONTROL_PANEL_PASSWORD` in `.env` (automatically bypassed when empty for local testing).
-
----
-
-## Audit Logs & Traffic Observability
-
-### Real-time Web Log Viewer via Dozzle
-Dozzle is integrated into `docker-compose.yml` for viewing, searching, and filtering container logs live in your browser:
-* Access **`http://<HOST_IP>:8080`** (e.g., `http://localhost:8080`)
-* Select the `egress-proxy` container to observe Squid access events (`TCP_TUNNEL/200`, `TCP_DENIED/403`) cleanly without health check noise.
-
-### Real-time CLI Audit Logs
-```bash
-make logs
-```
-
-### Real-time Color Alert Monitoring
-Detect blocked connection attempts instantly in your terminal (supports alert storm suppression and Webhook notifications):
-```bash
-make watch
-```
-
-### List Blocked Requests (403 DENIED)
-View domains and URLs blocked by the proxy when accessed by the agent:
-```bash
-make audit-denied
-```
-
-### Domain Frequency & Data Transfer Summary
-```bash
-make audit-summary
-```
-
-### Ingress Audit Logs
-Display connection logs from host connections to noVNC and ACP server:
-```bash
-make audit-ingress
-```
-
-### Observability Dashboard & APIs for Humans and LLMs
-Analyzes Squid JSON logs (`/var/log/squid/access.json`) to generate human-readable Web Dashboards and structured JSON/Markdown APIs for LLM agents:
-
-![Goose-in-the-Box Audit & Observability Dashboard](docs/images/audit-dashboard-en.png)
-
-- `user_agent`: Identify tools and libraries making outbound requests
-- `bytes_sent` / `bytes_received`: Estimate LLM token usage and cost
-- `duration_ms`: Response time per request
-- `alerts`: Proactive alert evaluations for block rate spikes or large transfers
-
-```bash
-# Generate dashboard and JSON / Markdown API manually
-make report
-
-# Output JSON report directly to stdout for LLM monitoring pipelines
-make report-json
-```
-
-- 🔄 **Automated Continuous Updates (`report-watcher`)**:
-  - When running via `make up-proxy` or `docker compose up -d`, a dedicated background worker automatically recalculates metrics every 30 seconds (interval configurable via `REPORT_INTERVAL` in `.env`).
-- 📊 **Web UI Dashboard**: `http://<HOST_IP>:6080/report/` (Auto-refreshes every 30s with direct links to noVNC & Dozzle)
-- 🤖 **LLM JSON API**: `http://<HOST_IP>:6080/report/api/status.json` (Structured JSON for curl or LLM parsing)
-- 📝 **LLM Markdown Summary**: `http://<HOST_IP>:6080/report/api/summary.md` (Context-optimized text summary)
-- ⚙️ **Pricing & Alert Rules**: Configurable via `config/llm-pricing.json`
-
-### Cross-Session Comparison
-Compare network patterns across historical session logs:
-```bash
-make audit-history
-```
-
-### Manual Log Rotation
-```bash
-make log-rotate
-```
-
----
-
-## Dynamic Whitelist Management & Emergency Kill-Switch
-
-### Dynamic Whitelist Reload
-To add or modify allowed egress domains, edit `squid/whitelist.txt` on the host and reload configuration instantly:
-```bash
-# Run after updating squid/whitelist.txt
-make reload
-```
-*(Applies changes immediately without breaking active connections)*
-
-### Emergency Kill-Switch
-Instantly cut off or restore all outbound agent traffic via CLI:
-```bash
-# Emergency block: Clears whitelist and reconfigures Squid
-make block-all
-
-# Restore traffic: Restores original whitelist and reconfigures Squid
-make unblock
-```
-
----
-
-## Starter Environment & MCP Infrastructure
-
-The sandbox includes pre-configured tooling and best practices so AI agents can autonomously write code and interact with Model Context Protocol (MCP) servers:
-
-1. **Core Utilities & Pre-configured Git**:
-   - `git` pre-configured with `user.name` (Goose Agent), `user.email`, `safe.directory`, and `defaultBranch`.
-   - `tmux` (background session persistence and mouse support enabled).
-   - Core CLI tools: `build-essential` (make, gcc, etc.), `wget`, `unzip`, `nano`, `less`, `htop`, `tree`.
-2. **Runtimes & MCP Infrastructure**:
-   - **Python 3.11** + **`uv` / `uvx`**: Ultra-fast package management and on-demand MCP server execution.
-   - **`pipx`**: Isolated CLI tool execution environment.
-   - **Node.js** + **`npm` / `npx`**: Platform for running TypeScript/JavaScript MCP servers.
-3. **Official Project Instructions (`.goosehints`)**:
-   - Located at `/workspace/.goosehints`, defining best practices for agent execution.
-
----
-
-## Workspace Sharing & Artifact Export
-
-1. **Real-time Host Synchronization (Bind Mount)**:
-   - Any files created or modified by Goose inside `/workspace` are immediately synchronized to `./workspace/` on the host machine.
-2. **One-command Artifact Export**:
-   - Export workspace artifacts into a timestamped tar.gz archive:
-     ```bash
-     make export-workspace
-     ```
-     Archives are saved to `exports/workspace_YYYYMMDD_HHMMSS.tar.gz`.
 
 ---
 

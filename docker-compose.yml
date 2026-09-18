@@ -27,7 +27,7 @@ services:
 
   # ------------------------------------------------------------
   # Ingress Reverse Proxy (Nginx: ホストから内部への画面・ACP中継専任)
-  # WebSocket (noVNC) も完全サポート
+  # WebSocket (noVNC) もサポート
   # ------------------------------------------------------------
   ingress-proxy:
     image: nginx:alpine
@@ -175,7 +175,7 @@ services:
 networks:
   internal-net:
     driver: bridge
-    internal: true  # カーネルレベルで外部への直接ルーティングを100%遮断
+    internal: true  # カーネルレベルで外部への直接ルーティングを遮断
 
   external-net:
     driver: bridge  # プロキシのみが外部と通信可能

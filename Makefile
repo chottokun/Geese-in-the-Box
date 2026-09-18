@@ -134,7 +134,7 @@ audit-history:
 reload:
 	docker compose exec egress-proxy squid -k reconfigure
 
-# 完全キルスイッチ（全拒否 ACL に切り替えて reconfigure）
+# 緊急キルスイッチ（全拒否 ACL に切り替えて reconfigure）
 block-all:
 	@if [ ! -f squid/.whitelist.txt.bak ]; then \
 		cp squid/whitelist.txt squid/.whitelist.txt.bak; \

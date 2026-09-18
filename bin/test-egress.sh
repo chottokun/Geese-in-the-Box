@@ -43,7 +43,7 @@ if curl -s --connect-timeout 3 --noproxy "*" https://api.openai.com > /dev/null 
     echo "  -> CRITICAL: プロキシを迂回して外部接続に成功してしまいました！"
     FAIL=$((FAIL + 1))
 else
-    echo "  -> OK: internal ネットワークにより直接接続（バイパス）が完全に遮断されました"
+    echo "  -> OK: internal ネットワークにより直接接続（バイパス）が正常に遮断されました"
     PASS=$((PASS + 1))
 fi
 

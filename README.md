@@ -1,4 +1,4 @@
-# Goose-in-the-Box: AI エージェント完全通信制御＆監査サンドボックス
+# Goose-in-the-Box: AI エージェントのネットワーク隔離・監査サンドボックス
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -8,23 +8,203 @@
 
 [English](README.en.md) | [日本語](README.md)
 
-AIエージェント「Goose」を安全に実行するための、Dockerベースの通信完全隔離・監査サンドボックスです。
+AIエージェント「Goose」を安全に実行するための、Dockerベースのネットワーク隔離・監査サンドボックスです。
 
-Docker の `internal: true` ネットワーク（L3/L4）と Squid フォワードプロキシ（L7）の **2段構え** により、エージェントによる勝手な外部通信やデータ流出を 100% 遮断し、全通信試行を構造化 JSON ログに記録・監査します。また、Goose 本体の匿名テレメトリ送信もデフォルトで無効化されています。
+Docker の `internal: true` ネットワーク（L3/L4）と Squid フォワードプロキシ（L7）の **多層防御** により、エージェントによる未許可の外部通信や意図しないデータ流出を遮断し、全通信試行を構造化 JSON ログに記録・監査します。また、Goose 本体の匿名テレメトリ送信もデフォルトで無効化されています。
 
 ---
 
 ## 主な特徴
 
-- 🔒 **プロキシバイパスの完全排除 (L3/L4 隔離)**:
+- 🔒 **プロキシバイパスの防止 (L3/L4 隔離)**:
   - エージェントコンテナは `internal: true` ネットワーク内に配置され、外部へのデフォルトゲートウェイが存在しません。
   - プロキシ設定を無視した直接通信（IP直撃やDNS漏洩）を試みても、Linux カーネルが即座にパケットを破棄します。
 - 🛡️ **厳格なホワイトリスト制御 (L7 制御)**:
   - 外部と通信可能な唯一の出口である Squid プロキシが、`whitelist.txt` に登録されたドメイン宛てのみ通過を許可します。未許可ドメインは `403 Forbidden` で即座に遮断されます。
 - 📊 **JSON 構造化監査ログ**:
   - 全通信（許可・遮断・HTTPステータス・ドメイン・送受信量）を ISO8601 タイムスタンプ付きの JSON 形式で `/var/log/squid/access.json` に記録。CLI で即座にフィルタリング・集計が可能です。
-- 🚫 **テレメトリ強制遮断**:
-  - `GOOSE_TELEMETRY_ENABLED=false` が適用され、エージェント自体の利用データ送信を抑止します。
+- 🚫 **テレメトリの無効化**:
+  - `GOOSE_TELEMETRY_ENABLED=false` が適用され、エージェント自体の利用実績データ送信を抑止します。
+
+---
+
+## セキュリティ境界と設計前提 (Security Boundaries & Non-Goals)
+
+本サンドボックスは、AI エージェントの自律実行に伴うリスクを軽減するために設計されています。運用の判断にあたり、以下のセキュリティ境界（保証事項）と前提（スコープ外事項）をご参照ください。
+
+### セキュリティ境界 (Guarantees)
+- 🔒 **ネットワーク隔離 (L3/L4 & L7)**: Docker の `internal: true` ネットワークによりデフォルトゲートウェイを排除し、直接通信を防止します。外部通信は唯一の出口である Squid プロキシを経由し、ホワイトリストに登録されたドメインのみ接続を許可します。
+- 🛡️ **非特権コンテナ実行**: コンテナは特権モード（`--privileged`）を使用せず、一般ユーザー権限（UID/GID 1000）でプロセスを実行します。
+- 🚫 **Docker ソケットの非公開**: エージェントコンテナ（`goose-agent`）にはホスト側の Docker ソケット（`/var/run/docker.sock`）は一切マウントされていません。エージェントがコンテナ内からホストの Docker デーモンを操作することはできません（※管理系コンテナ `control-panel` および `dozzle` のみ、コンテナ状態監視・ログ表示用に読み取り専用 `:ro` で参照）。
+- 📁 **ファイルアクセスの局所化**: ホストと共有される領域はリポジトリ内の `./workspace/` ディレクトリおよび設定・ログ用ディレクトリに限定されており、ホストのルートファイルシステムや機密ファイルへのアクセス権はありません。
+
+### 設計前提・スコープ外事項 (Non-Goals)
+- ⚠️ **ホストOS・カーネル脆弱性への防御**: Docker コンテナはホストと Linux カーネルを共有しているため、カーネルレベルのゼロデイ脆弱性等を突いた高度なコンテナエスケープ攻撃への防御は保証外です。高機密環境では、ホストマシン自体を独立した仮想マシン（VM）上で運用することを推奨します。
+- 🔍 **暗号化通信本文の検査 (DPI / SSL Bump)**: 本サンドボックスは SSL/TLS 通信の復号を行わず、HTTP CONNECT トンネルによる宛先ドメイン単位のルーティング制御・監査を行います。これにより、エージェントコンテナへの独自 CA 証明書注入や秘密鍵管理の複雑さを排し、安全かつ軽量に運用できます。
+
+---
+
+## クイックスタート
+
+### 1. 初期設定
+```bash
+cp .env.example .env
+```
+> [!TIP]
+> `.env` を開き、利用したい LLM（OpenAI, Anthropic, Gemini, Groq 等）の API キーを設定してください。ホスト上の Ollama（ローカル LLM）のみを使用する場合は API キーの設定は不要です。
+
+### 2. コンテナイメージのビルド
+```bash
+make build
+```
+
+### 3. 通信遮断の実動テスト
+隔離環境内から検証スクリプトを実行し、通信制御が正常に働いているかテストします：
+```bash
+make test
+```
+**テスト内容:**
+1. ✅ **ホワイトリストドメイン (`api.openai.com`)**: プロキシ経由で正常に接続
+2. 🛑 **非許可ドメイン (`www.google.com`)**: Squid プロキシが `403 Forbidden` で遮断
+3. 🔒 **直接接続バイパス**: Docker `internal: true` により `Network unreachable` で遮断
+
+### 4. Goose の起動（用途に応じた 3 つの実行モード）
+テストが正常に完了したら、用途に合わせて以下のいずれかのモードで Goose を起動します：
+
+- **CLI 対話セッション（推奨・最速）**:
+  ```bash
+  make session
+  ```
+  ターミナル上で対話型 Goose CLI を起動します。ホストの `./workspace/` とリアルタイム同期され、`workspace/AGENTS.md` や `.agents/` 内のルールを自動読み込みします。
+
+- **ブラウザ仮想デスクトップ（画面確認・ブラウザ操作）**:
+  ```bash
+  make gui
+  ```
+  ホストのブラウザで **`http://localhost:6080/vnc.html`** を開くと、隔離コンテナ内の Xfce4 デスクトップがそのまま表示・操作できます（VNC クライアントからは `localhost:5900`）。エージェントにブラウザを操作させる場合や画面全体を確認したい場合に最適です。
+
+- **Goose Desktop 連携（ホスト上の公式 GUI アプリから接続）**:
+  ```bash
+  make serve
+  ```
+  ACP サーバーを起動します。ホストマシン上で起動した公式 Goose Desktop アプリの接続先に `http://localhost:3284` を指定して作業します。
+
+### 5. コンテナの停止・後片付け
+作業を終了し、起動中のコンテナを停止する場合は以下のコマンドを実行します：
+```bash
+make down
+```
+
+---
+
+## サンドボックスの監視 & 通信制御
+
+本環境では、ブラウザから直感的に操作できる **Web UI ツール群** と、自動化・ターミナル作業に適した **CLI コマンド群** の両方を提供しています。
+
+### 1. Web UI による統合管理（推奨）
+
+#### 🎛️ 統合コントロールパネル (`make control`)
+ブラウザからワンクリックで緊急キルスイッチの作動や、ドメインホワイトリストの動的編集・一時許可 (TTL) が行える統合管理 UI です：
+
+![Goose-in-the-Box 統合コントロールパネル](docs/images/control-panel.png)
+
+```bash
+make control
+```
+* **アクセス URL**: `http://localhost:6080/control/`
+* 🔒 **緊急キルスイッチ**: 全通信即座遮断 / 解除をワンクリックで実行
+* ⏳ **ワンクリック一時ホワイトリスト化**: 遮断ログから 15分/1時間の一時許可（または恒久許可）をワンクリック付与（自動失効・リアルタイム TTL カウントダウン付き）
+* 📊 **リアルタイム統計**: 総リクエスト、許可/遮断数、遮断率、直近の遮断ログ、ドメイン別 Top 10
+* 🌐 **多言語 (i18n)** & 🔐 **セッション認証**（`.env` の `CONTROL_PANEL_PASSWORD`）対応
+
+#### 📋 Dozzle リアルタイムログ監視
+* **アクセス URL**: `http://<ホストIP>:8080` (例: `http://localhost:8080`)
+* `egress-proxy` コンテナを選択することで、Squid のアクセスログ（`TCP_TUNNEL/200` や `TCP_DENIED/403` など）をヘルスチェックのノイズなしでリアルタイム監視・検索できます。
+
+#### 📊 監査ログ・可観測性ダッシュボード & API
+Squid の JSON ログ (`/var/log/squid/access.json`) をバックグラウンドで自動集計（30秒周期）し、可視化ダッシュボードと LLM 向け構造化 API を配信します：
+
+![Goose-in-the-Box 監査・可観測性ダッシュボード](docs/images/audit-dashboard.png)
+
+* **Web UI ダッシュボード**: `http://<ホストIP>:6080/report/` (宛先別トラフィック量、所要時間、アラート推移)
+* 🤖 **LLM 向け JSON API**: `http://<ホストIP>:6080/report/api/status.json` (スクリプトや外部エージェントによる自動パース用)
+* 📝 **LLM 向け Markdown 要約**: `http://<ホストIP>:6080/report/api/summary.md` (コンテキスト消費を抑えたテキスト要約)
+* **トークン・コスト推計（参考値）**: HTTPS 通信本文を復号しない仕様上、正確なトークン数の算出は困難なため、転送バイト数に基づく概算オーダー（お試し・参考値）として表示します。
+* ⚙️ **単価・閾値設定**: `config/llm-pricing.json` で推計用モデル単価や各種アラート基準値を調整可能
+
+---
+
+### 2. CLI による監査・通信制御コマンド
+
+ターミナル上での確認やスクリプト連携用の Makefile ターゲット一覧です：
+
+| コマンド | 説明 |
+| :--- | :--- |
+| **`make logs`** | リアルタイム JSON 構造化監査ログのストリーミング表示 |
+| **`make watch`** | 遮断された通信（403 DENIED）のリアルタイムカラーアラート監視（通知対応） |
+| **`make audit-denied`** | ブロックされたドメイン・URL の一覧抽出 |
+| **`make audit-summary`** | 宛先ドメイン別のアクセス頻度・転送量集計 |
+| **`make audit-ingress`** | noVNC や ACP サーバーへの外部接続履歴一覧表示 |
+| **`make audit-history`** | ローテーション済みログも含めた過去セッション横断の傾向比較 |
+| **`make reload`** | `squid/whitelist.txt` 編集後の設定即時反映（通信切断なし） |
+| **`make block-all`** | **緊急キルスイッチ**: 全通信を緊急遮断（ホワイトリストを空にして即時反映） |
+| **`make unblock`** | キルスイッチ解除（元のホワイトリストを復元して即時反映） |
+| **`make report`** | 監査ダッシュボードおよび JSON/Markdown API の手動即時生成 |
+| **`make log-rotate`** | 監査ログの手動ローテーション実行 |
+```
+
+---
+
+## 開発スターター環境 & MCP 基盤
+
+本サンドボックスは、AI エージェントが自律的にコーディングやツール利用（MCP）を行えるよう、以下の環境があらかじめ整備されています：
+
+1. **基本ツール & Git 自動設定**:
+   - `git` は `user.name`（Goose Agent）、`user.email`、`safe.directory`、`defaultBranch` が事前設定済み。
+   - `tmux`（セッション永続化・バックグラウンド管理、マウス有効化）
+   - 基本ユーティリティ: `build-essential`（make, gcc等）、`wget`、`unzip`、`nano`、`less`、`htop`、`tree`
+2. **言語ランタイム & MCP 拡張基盤**:
+   - **Python 3.11** + **`uv` / `uvx`**: 高速パッケージ管理およびオンデマンド MCP サーバー実行。
+   - **`pipx`**: 隔離環境での CLI ツール実行。
+   - **Node.js** + **`npm` / `npx`**: TypeScript/JavaScript 系 MCP サーバー実行基盤。
+3. **公式準拠のプロジェクト指示 (`.goosehints`)**:
+   - `/workspace/.goosehints` に日本語対応、Git コミット指針、ハングアップ防止（常駐サーバーは `tmux` で起動）などの推奨指針が定義されています。
+
+---
+
+## 成果物のローカル共有 & エクスポート
+
+1. **ホストマシンとのリアルタイム共有 (バインドマウント)**:
+   - Goose が `/workspace` 配下に作成・編集したコードやファイルは、ホスト側の `./workspace/` にリアルタイムで直接反映されます。手元のエディタ（VS Code, IDE等）で即座に閲覧・編集可能です。
+2. **成果物の一括アーカイブ**:
+   - 成果物一式をタイムスタンプ付き tar.gz アーカイブとして書き出したい場合は、以下のコマンドを実行します：
+     ```bash
+     make export-workspace
+     ```
+     `exports/workspace_YYYYMMDD_HHMMSS.tar.gz` にアーカイブが出力されます。
+
+---
+
+## 設定パラメータ (.env)
+
+環境設定はすべて `.env` ファイルで一元管理できます（`.env.example` を参考に設定）。
+
+| パラメータ | 説明 | デフォルト値 |
+| :--- | :--- | :--- |
+| **`HOST_BIND`** | ホスト側公開IPバインド設定（全公開: `0.0.0.0`、ローカル限定: `127.0.0.1`、指定NIC-IP） | `0.0.0.0` |
+| **`OPENAI_API_KEY` 等** | 各種 LLM プロバイダーの API キー | （空欄） |
+| **`OPENAI_BASE_URL`** | OpenAI互換エンドポイント (さくらAI, vLLM, LocalAI等) ※末尾スラッシュなし | `https://api.openai.com/v1` |
+| **`OPENAI_HOST`** | OpenAI互換ホスト名 (プロバイダー解決用) | `https://api.openai.com` |
+| **`OLLAMA_HOST`** | ローカル LLM ホスト接続先 (ポート11434) | `http://host.docker.internal:11434` |
+| **`NOVNC_PORT`** | noVNC Web UI ポート（ブラウザ接続先） | `6080` |
+| **`GOOSE_SERVE_PORT`** | Goose ACP サーバー公開ポート | `3284` |
+| **`SQUID_PORT`** | Squid 監査プロキシポート | `3128` |
+| **`DOZZLE_PORT`** | Dozzle Web リアルタイムログ監視ポート | `8080` |
+| **`RESOLUTION`** | 仮想デスクトップ解像度 | `1280x800x24` |
+| **`TZ`** | タイムゾーン（時計・ログ出力時刻） | `Asia/Tokyo` |
+| **`SHM_SIZE`** | 共有メモリサイズ（GUI安定化用） | `1gb` |
+| **`UID` / `GID`** | コンテナ内実行ユーザー権限 | `1000` / `1000` |
+| **`GOOSE_TELEMETRY_ENABLED`** | 匿名の利用実績データ送信制御 | `false` |
 
 ---
 
@@ -70,217 +250,6 @@ goose-in-the-box/
     └── memo.md              # 実装仕様・要件メモ
 ```
 
-## 設定パラメータ (.env)
-
-環境設定はすべて `.env` ファイルで一元管理できます（`.env.example` を参考に設定）。
-
-| パラメータ | 説明 | デフォルト値 |
-| :--- | :--- | :--- |
-| **`HOST_BIND`** | ホスト側公開IPバインド設定（全公開: `0.0.0.0`、ローカル限定: `127.0.0.1`、指定NIC-IP） | `0.0.0.0` |
-| **`OPENAI_API_KEY` 等** | 各種 LLM プロバイダーの API キー | （空欄） |
-| **`OPENAI_BASE_URL`** | OpenAI互換エンドポイント (さくらAI, vLLM, LocalAI等) ※末尾スラッシュなし | `https://api.openai.com/v1` |
-| **`OPENAI_HOST`** | OpenAI互換ホスト名 (プロバイダー解決用) | `https://api.openai.com` |
-| **`OLLAMA_HOST`** | ローカル LLM ホスト接続先 (ポート11434) | `http://host.docker.internal:11434` |
-| **`NOVNC_PORT`** | noVNC Web UI ポート（ブラウザ接続先） | `6080` |
-| **`GOOSE_SERVE_PORT`** | Goose ACP サーバー公開ポート | `3284` |
-| **`SQUID_PORT`** | Squid 監査プロキシポート | `3128` |
-| **`DOZZLE_PORT`** | Dozzle Web リアルタイムログ監視ポート | `8080` |
-| **`RESOLUTION`** | 仮想デスクトップ解像度 | `1280x800x24` |
-| **`TZ`** | タイムゾーン（時計・ログ出力時刻） | `Asia/Tokyo` |
-| **`SHM_SIZE`** | 共有メモリサイズ（GUI安定化用） | `1gb` |
-| **`UID` / `GID`** | コンテナ内実行ユーザー権限 | `1000` / `1000` |
-| **`GOOSE_TELEMETRY_ENABLED`** | 匿名の利用実績データ送信制御 | `false` |
-
----
-
-## クイックスタート
-
-### 1. 初期設定
-```bash
-cp .env.example .env
-# .env を開いて必要な API キーや設定を調整
-```
-
-### 2. コンテナイメージのビルド
-```bash
-make build
-```
-
-### 3. 通信遮断の実動テスト
-隔離環境内から検証スクリプトを実行し、通信制御が正常に働いているかテストします：
-```bash
-make test
-```
-**テスト内容:**
-1. ✅ **ホワイトリストドメイン (`api.openai.com`)**: プロキシ経由で正常に接続
-2. 🛑 **非許可ドメイン (`www.google.com`)**: Squid プロキシが `403 Forbidden` で遮断
-3. 🔒 **直接接続バイパス**: Docker `internal: true` により `Network unreachable` で遮断
-
----
-
-## Goose の実行
-
-### CLI 対話セッション
-`workspace/AGENTS.md` や `.agents/rules/*.md` のルールを自動読み込みし、隔離環境内で Goose CLI を開始します：
-```bash
-make session
-```
-
-### Goose Desktop（GUI）との連携
-ACP サーバーを起動し、ホスト側の Goose Desktop から接続して作業します：
-```bash
-make serve
-```
-* ホスト側 Goose Desktop の接続先: `http://localhost:3284`
-
-### コンテナ内 GUI デスクトップの利用 (noVNC / ブラウザ操作)
-エージェントにブラウザを操作させたり、コンテナ内の画面を丸ごと確認・操作したい場合は、GUI デスクトップ環境を起動します：
-```bash
-make gui
-```
-* 起動後、ホストのブラウザで **`http://localhost:6080/vnc.html`** を開くと、隔離コンテナ内の Xfce4 デスクトップがそのままブラウザ上に表示されます。
-* VNC クライアントから接続する場合は `localhost:5900` にアクセスします。
-
-### 統合コントロールパネル Web UI (キルスイッチ & 通信制御)
-ブラウザからワンクリックで緊急キルスイッチの作動や、ドメインホワイトリストの動的編集・一時許可 (TTL) が行える統合コントロールパネルを利用できます：
-
-![Goose-in-the-Box 統合コントロールパネル](docs/images/control-panel.png)
-
-```bash
-make control
-```
-* **`http://localhost:6080/control/`** にアクセス
-* 📊 **リアルタイム監査ダッシュボード**: 総リクエスト、許可/遮断数、遮断率、直近の遮断ログ、ドメイン別 Top 10
-* ⏳ **ワンクリック一時ホワイトリスト化**: 遮断ログから 15分/1時間の一時許可または恒久許可をワンクリックで付与（自動失効・TTLカウントダウン付き）
-* 🔒 **緊急キルスイッチ**: 全通信即座遮断 / 解除
-* 🌐 **多言語対応 (i18n)**: 画面右上のトグルボタンで日本語・英語を即時切り替え可能（設定は自動保存）
-* 🔐 **セッション認証**: `.env` の `CONTROL_PANEL_PASSWORD` に基づく安全な認証（未設定時はローカル検証用に自動スキップ）
-
----
-
-## 通信ログの監査・分析
-
-### Dozzle によるリアルタイムWebログ監視
-Dozzle が `docker-compose.yml` に定義されており、ブラウザからコンテナのログをリアルタイムに確認・検索・フィルタリングできます：
-* **`http://<ホストIP>:8080`** にアクセス (例: `http://localhost:8080` や `http://blue-two.local:8080`)
-* `egress-proxy` コンテナを選択することで、Squid のアクセスログ（`TCP_TUNNEL/200` や `TCP_DENIED/403` など）をヘルスチェックのノイズなしで監視可能です。
-
-### CLI でのリアルタイム監査ログの閲覧
-```bash
-make logs
-```
-
-### リアルタイムカラーアラート監視
-拒否された通信を即座に検出し、ターミナルにカラー表示します（ストーム抑制・Webhook通知対応）：
-```bash
-make watch
-```
-
-### 遮断された通信 (403 DENIED) の一覧抽出
-エージェントがアクセスを試みてブロックされたドメインや URL を確認します：
-```bash
-make audit-denied
-```
-
-### 宛先ドメイン別アクセス頻度・転送量集計
-```bash
-make audit-summary
-```
-
-### Ingress (外部からコンテナへの接続) 監査ログ
-noVNC や ACP サーバーへの接続履歴を一覧表示します：
-```bash
-make audit-ingress
-```
-
-### 監査ログ・LLM可観測性ダッシュボード & API
-Squid の JSON ログ (`/var/log/squid/access.json`) を解析し、**人間向け Web ダッシュボード**と **LLM 向け構造化 API (JSON / Markdown)** を一括生成・配信します：
-
-![Goose-in-the-Box 監査・可観測性ダッシュボード](docs/images/audit-dashboard.png)
-
-- `user_agent`: 通信を発生させたツールやライブラリの特定
-- `bytes_sent` / `bytes_received`: 送受信バイト数から LLM 消費トークン・コストを概算推計 (±50%目安)
-- `duration_ms`: レスポンス所要時間（ミリ秒）
-- `alerts`: 通信遮断率スパイクや大容量転送の事前評価アラート
-
-```bash
-# ダッシュボードおよび JSON / Markdown API を即時手動生成
-make report
-
-# LLM エージェント監視用に JSON のみ stdout に出力
-make report-json
-```
-
-- 🔄 **常時自動更新 (`report-watcher`)**:
-  - Docker Compose 起動中 (`make up-proxy` または `docker compose up -d`)、専用のバックグラウンドワーカーが **30秒ごとに自動集計** を継続実行します。ターミナルで監視プロセスを手動起動し続ける必要はありません（更新間隔は `.env` の `REPORT_INTERVAL` で調整可能）。
-- 📊 **Web UI ダッシュボード**: `http://<ホストIP>:6080/report/` (30秒自動リフレッシュ、noVNC・Dozzle への相互リンク付き)
-- 🤖 **LLM 向け JSON API**: `http://<ホストIP>:6080/report/api/status.json` (`curl` や LLM が即座にパース・判定可能)
-- 📝 **LLM 向け Markdown 要約**: `http://<ホストIP>:6080/report/api/summary.md` (コンテキスト消費を最小化するテキスト要約)
-- ⚙️ **プロバイダー単価・閾値設定**: `config/llm-pricing.json` でモデル単価や為替レート、アラート基準値を柔軟に調整可能
-
-### セッション別（日付別）の通信傾向比較
-過去にローテーションされたログも含め、セッション横断で通信傾向を比較集計します：
-```bash
-make audit-history
-```
-
-### 監査ログの手動ローテーション
-```bash
-make log-rotate
-```
-
----
-
-## ドメインホワイトリストの動的制御 & 完全キルスイッチ
-
-### ドメインの動的オン/オフ (リロード)
-許可するドメインを追加・変更したい場合は、ホスト側の `squid/whitelist.txt` を編集後、以下のコマンドで Squid の設定を即時反映します：
-```bash
-# squid/whitelist.txt を編集後に実行
-make reload
-```
-*(通信を切断・再接続することなく即時にホワイトリスト変更が適用されます)*
-
-### 完全キルスイッチ（一括オン/オフ）
-緊急時などに CLI から全通信を瞬時にシャットダウン・復元できます：
-```bash
-# 全通信を緊急遮断（ホワイトリストを空にして reconfigure）
-make block-all
-
-# 通信遮断を解除（ホワイトリストを復元して reconfigure）
-make unblock
-```
-
----
-
-## 開発スターター環境 & MCP 基盤
-
-本サンドボックスは、AI エージェントが自律的にコーディング・ツール利用（MCP）を行えるよう、ベストプラクティス構成が最初から整えられています：
-
-1. **基本ツール & Git 自動設定**:
-   - `git` は `user.name`（Goose Agent）、`user.email`、`safe.directory`、`defaultBranch` が事前設定済み。
-   - `tmux`（セッション永続化・バックグラウンド管理、マウス有効化）
-   - 基本ユーティリティ: `build-essential`（make, gcc等）、`wget`、`unzip`、`nano`、`less`、`htop`、`tree`
-2. **言語ランタイム & MCP 拡張基盤**:
-   - **Python 3.11** + **`uv` / `uvx`**: 高速パッケージ管理およびオンデマンド MCP サーバー実行。
-   - **`pipx`**: 隔離環境での CLI ツール実行。
-   - **Node.js** + **`npm` / `npx`**: TypeScript/JavaScript 系 MCP サーバー実行基盤。
-3. **公式準拠のプロジェクト指示 (`.goosehints`)**:
-   - `/workspace/.goosehints` に日本語対応、Git コミット指針、ハングアップ防止（常駐サーバーは `tmux` で起動）などのベストプラクティスが定義されています。
-
----
-
-## 成果物のローカル共有 & エクスポート
-
-1. **ホストマシンとのリアルタイム共有 (バインドマウント)**:
-   - Goose が `/workspace` 配下に作成・編集したコードやファイルは、ホスト側の `./workspace/` にリアルタイムで直接反映されます。手元のエディタ（VS Code, IDE等）で即座に閲覧・編集可能です。
-2. **ワンライナーでの成果物アーカイブ**:
-   - 成果物一式をタイムスタンプ付き tar.gz アーカイブとして書き出したい場合は、以下のコマンドを実行します：
-     ```bash
-     make export-workspace
-     ```
-     `exports/workspace_YYYYMMDD_HHMMSS.tar.gz` にアーカイブが出力されます。
-
 ---
 
 ## CI / 自動テストパイプライン
@@ -293,10 +262,10 @@ make unblock
    - Nginx 設定構文チェック (`nginx -t`)
    - Docker Compose 定義構文検証 (`docker compose config --quiet`)
    - 埋め込み Python スクリプト構文検証 (AST パース)
-2. **通信完全遮断 & 可観測性 実動テスト (`integration-tests`)**:
+2. **通信遮断 & 可観測性 実動テスト (`integration-tests`)**:
    - コントロールパネルのユニットテスト自動実行 (`make test-unit`)
    - Docker コンテナの自動ビルド
-   - L3/L4 内部隔離および L7 プロキシ経由の通信完全遮断テスト (`make test`)
+   - L3/L4 内部隔離および L7 プロキシ経由の通信遮断テスト (`make test`)
    - 監査集計・ダッシュボード・JSON/Markdown API 生成の動作検証 (`make report`)
    - 監査ログ・レポート成果物の自動保存（GitHub Actions アーティファクト）
 
