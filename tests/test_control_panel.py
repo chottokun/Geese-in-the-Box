@@ -201,3 +201,19 @@ def test_purge_expired_tokens():
     assert "expired_token_1" not in auth_mod.SESSION_TOKENS
     assert "expired_token_2" not in auth_mod.SESSION_TOKENS
 
+def test_security_headers_and_exception_handling(client):
+    # 1. セキュリティヘッダーの付与確認
+    res = client.get("/health")
+    assert res.status_code == 200
+    assert res.headers.get("X-Content-Type-Options") == "nosniff"
+    assert res.headers.get("X-Frame-Options") == "DENY"
+    assert res.headers.get("X-XSS-Protection") == "1; mode=block"
+
+    # 2. 不正なドメイン形式のバリデーションテスト (HTTP 400)
+    res_invalid = client.post("/api/whitelist", json={"domain": "invalid_domain\n.com"})
+    assert res_invalid.status_code == 400
+    assert res_invalid.json()["detail"] == "invalid_domain_format"
+
+    # 3. 存在しないエンドポイントアクセスの確認
+    res_404 = client.get("/non_existent_path_xyz")
+    assert res_404.status_code == 200 # Catch-all route returns index.html for SPA

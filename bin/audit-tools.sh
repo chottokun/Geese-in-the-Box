@@ -4,6 +4,14 @@
 
 set -euo pipefail
 
+# 依存コマンドの確認
+for cmd in jq docker; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "エラー: 必須コマンド '$cmd' がインストールされていません。" >&2
+        exit 1
+    fi
+done
+
 PROXY_CONTAINER="egress-proxy"
 LOG_PATH="/var/log/squid/access.json"
 

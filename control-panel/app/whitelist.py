@@ -1,6 +1,16 @@
 import os
+import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+
+DOMAIN_REGEX = re.compile(r"^[a-zA-Z0-9\.\_\-\:\*]+$")
+
+def validate_domain_format(domain: str):
+    if not domain or not DOMAIN_REGEX.match(domain) or "\n" in domain or "\r" in domain:
+        raise HTTPException(
+            status_code=400,
+            detail="invalid_domain_format"
+        )
 from typing import Optional
 from app.auth import get_current_user
 from app.squid_service import reconfigure_squid
@@ -98,8 +108,7 @@ def get_whitelist():
 def add_domain(body: AddDomainRequest, request: Request):
     client_ip = request.client.host if request.client else "unknown"
     domain = body.domain.strip()
-    if not domain:
-        raise HTTPException(status_code=400, detail="empty_domain")
+    validate_domain_format(domain)
 
     items, headers = parse_whitelist_file()
     for item in items:
@@ -131,8 +140,7 @@ def add_temporary_domain(body: AddTempDomainRequest, request: Request):
     client_ip = request.client.host if request.client else "unknown"
     domain = body.domain.strip()
     duration = body.duration_minutes
-    if not domain:
-        raise HTTPException(status_code=400, detail="empty_domain")
+    validate_domain_format(domain)
 
     items, headers = parse_whitelist_file()
     existing_item = next((item for item in items if item["domain"].lower() == domain.lower()), None)

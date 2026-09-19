@@ -35,6 +35,30 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"Unhandled server error: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "detail": "Internal Server Error",
+            "message_ja": "サーバー内部エラーが発生しました。",
+            "message_en": "An internal server error occurred."
+        }
+    )
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
 # Include API Routers
 app.include_router(auth_router)
 app.include_router(killswitch_router)
