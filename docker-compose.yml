@@ -7,7 +7,7 @@ services:
     image: ubuntu/squid:latest
     container_name: egress-proxy
     ports:
-      - "${HOST_BIND:-0.0.0.0}:${SQUID_PORT:-3128}:3128" # 監査用フォワードプロキシ
+      - "${HOST_BIND:-127.0.0.1}:${SQUID_PORT:-3128}:3128" # 監査用フォワードプロキシ
     volumes:
       - ./squid/squid.conf:/etc/squid/squid.conf:ro
       - ./squid/whitelist.txt:/etc/squid/whitelist.txt:ro
@@ -33,8 +33,8 @@ services:
     image: nginx:alpine
     container_name: ingress-proxy
     ports:
-      - "${HOST_BIND:-0.0.0.0}:${NOVNC_PORT:-6080}:6080" # noVNC (ブラウザ接続用Web UI & WebSocket)
-      - "${HOST_BIND:-0.0.0.0}:${GOOSE_SERVE_PORT:-3284}:3284" # Goose ACP サーバー用
+      - "${HOST_BIND:-127.0.0.1}:${NOVNC_PORT:-6080}:6080" # noVNC (ブラウザ接続用Web UI & WebSocket)
+      - "${HOST_BIND:-127.0.0.1}:${GOOSE_SERVE_PORT:-3284}:3284" # Goose ACP サーバー用
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./logs/nginx:/var/log/nginx
@@ -138,7 +138,7 @@ services:
     image: amir20/dozzle:latest
     container_name: dozzle
     ports:
-      - "${HOST_BIND:-0.0.0.0}:${DOZZLE_PORT:-8080}:8080"
+      - "${HOST_BIND:-127.0.0.1}:${DOZZLE_PORT:-8080}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 

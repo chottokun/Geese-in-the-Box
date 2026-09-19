@@ -17,7 +17,7 @@ echo " 接続先プロキシ: $PROXY"
 echo "=================================================="
 
 echo ""
-echo "=== [1/3] ホワイトリストドメインのテスト (api.openai.com) ==="
+echo "=== [1/5] ホワイトリストドメインのテスト (api.openai.com) ==="
 if curl -s -I --proxy "$PROXY" https://api.openai.com 2>&1 | grep -q -E "HTTP/.* (200|401|404)"; then
     echo "  -> OK: プロキシ経由で接続許可"
     PASS=$((PASS + 1))
@@ -27,7 +27,7 @@ else
 fi
 
 echo ""
-echo "=== [2/3] 非許可ドメインのテスト (www.google.com) ==="
+echo "=== [2/5] 非許可ドメインのテスト (www.google.com) ==="
 OUTPUT=$(curl -v --proxy "$PROXY" https://www.google.com 2>&1 || true)
 if echo "$OUTPUT" | grep -q -E "403|Forbidden"; then
     echo "  -> OK: プロキシが 403 Forbidden で正常に遮断"
@@ -38,7 +38,7 @@ else
 fi
 
 echo ""
-echo "=== [3/3] プロキシバイパス遮断のテスト (直接接続) ==="
+echo "=== [3/5] プロキシバイパス遮断のテスト (直接接続) ==="
 if curl -s --connect-timeout 3 --noproxy "*" https://api.openai.com > /dev/null 2>&1; then
     echo "  -> CRITICAL: プロキシを迂回して外部接続に成功してしまいました！"
     FAIL=$((FAIL + 1))
@@ -49,7 +49,7 @@ fi
 
 echo ""
 echo ""
-echo "=== [4/6] host.docker.internal ポート制限テスト ==="
+echo "=== [4/5] host.docker.internal ポート制限テスト ==="
 OUTPUT_OLLAMA=$(curl -s -I --proxy "$PROXY" http://host.docker.internal:11434 2>&1 || true)
 if echo "$OUTPUT_OLLAMA" | grep -q -E "HTTP/.* (200|401|404|502|503|504)"; then
     echo "  -> OK: ポート 11434 (Ollama) への接続許可"

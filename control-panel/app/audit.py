@@ -37,6 +37,47 @@ def log_control_operation(
     except Exception as e:
         print(f"Failed to write control panel audit log: {e}")
 
+def read_reverse_lines(filepath: str, max_scan_lines: int = 5000, chunk_size: int = 65536):
+    """
+    ファイル末尾から逆順に行をイテレートするジェネレータ。
+    巨大ログファイルでも全行メモリ展開を回避し、高速かつ省メモリで最新ログを取得する。
+    """
+    if not os.path.exists(filepath):
+        return
+
+    try:
+        with open(filepath, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            file_size = f.tell()
+            if file_size == 0:
+                return
+
+            buffer = b""
+            pointer = file_size
+            lines_yielded = 0
+
+            while pointer > 0 and lines_yielded < max_scan_lines:
+                read_size = min(chunk_size, pointer)
+                pointer -= read_size
+                f.seek(pointer)
+                chunk = f.read(read_size)
+                buffer = chunk + buffer
+                lines = buffer.split(b"\n")
+                buffer = lines[0]  # 先頭の不完全行を次回チャンク用に保持
+
+                for line in reversed(lines[1:]):
+                    stripped = line.strip()
+                    if stripped:
+                        yield stripped.decode("utf-8", errors="replace")
+                        lines_yielded += 1
+                        if lines_yielded >= max_scan_lines:
+                            return
+
+            if buffer.strip() and lines_yielded < max_scan_lines:
+                yield buffer.strip().decode("utf-8", errors="replace")
+    except Exception as e:
+        print(f"Error reading reverse lines from {filepath}: {e}")
+
 @router.get("/status", dependencies=[Depends(get_current_user)])
 def get_status():
     if os.path.exists(STATUS_FILE):
@@ -62,13 +103,9 @@ def get_logs(
 
     logs = []
     try:
-        with open(SQUID_LOG_FILE, "r", encoding="utf-8", errors="replace") as f:
-            lines = f.readlines()
-
-        for line in reversed(lines):
-            line = line.strip()
-            if not line:
-                continue
+        # 最大 limit * 10 行スキャン（フィルタ適用を考慮）
+        max_scan = max(1000, limit * 10)
+        for line in read_reverse_lines(SQUID_LOG_FILE, max_scan_lines=max_scan):
             try:
                 entry = json.loads(line)
                 if filter_type == "denied":
@@ -95,13 +132,7 @@ def get_operation_audit(limit: int = Query(50, ge=1, le=200)):
 
     operations = []
     try:
-        with open(AUDIT_FILE, "r", encoding="utf-8", errors="replace") as f:
-            lines = f.readlines()
-
-        for line in reversed(lines):
-            line = line.strip()
-            if not line:
-                continue
+        for line in read_reverse_lines(AUDIT_FILE, max_scan_lines=limit * 2):
             try:
                 operations.append(json.loads(line))
                 if len(operations) >= limit:
