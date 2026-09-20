@@ -1,10 +1,10 @@
-import os
-import json
 import asyncio
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional
-from app.squid_service import reconfigure_squid
+import json
+import os
+from datetime import datetime, timedelta, timezone
+
 from app.audit import log_control_operation
+from app.squid_service import reconfigure_squid
 
 DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 TEMP_WHITELIST_FILE = os.path.join(DATA_DIR, ".temp_whitelist.json")
@@ -12,7 +12,7 @@ WHITELIST_FILE = os.path.join(DATA_DIR, "whitelist.txt")
 
 JST = timezone(timedelta(hours=9))
 
-def _load_temp_data() -> Dict[str, dict]:
+def _load_temp_data() -> dict[str, dict]:
     if not os.path.exists(TEMP_WHITELIST_FILE):
         return {}
     try:
@@ -22,7 +22,7 @@ def _load_temp_data() -> Dict[str, dict]:
         print(f"Failed to load temp whitelist file: {e}")
         return {}
 
-def _save_temp_data(data: Dict[str, dict]):
+def _save_temp_data(data: dict[str, dict]):
     try:
         os.makedirs(os.path.dirname(TEMP_WHITELIST_FILE), exist_ok=True)
         with open(TEMP_WHITELIST_FILE, "w", encoding="utf-8") as f:
@@ -30,7 +30,7 @@ def _save_temp_data(data: Dict[str, dict]):
     except Exception as e:
         print(f"Failed to save temp whitelist file: {e}")
 
-def get_temp_domains_info() -> Dict[str, dict]:
+def get_temp_domains_info() -> dict[str, dict]:
     """現在の一時許可ドメイン情報（残り時間付き）を返却"""
     now = datetime.now(timezone.utc)
     data = _load_temp_data()
@@ -83,7 +83,7 @@ def remove_temp_domain(domain: str):
         del data[dom_key]
         _save_temp_data(data)
 
-def check_and_expire_temp_domains(reconfigure: bool = True) -> List[str]:
+def check_and_expire_temp_domains(reconfigure: bool = True) -> list[str]:
     """期限切れドメインを検出し、whitelist.txt から削除して Squid を再読み込み"""
     now = datetime.now(timezone.utc)
     data = _load_temp_data()
@@ -130,7 +130,7 @@ def check_and_expire_temp_domains(reconfigure: bool = True) -> List[str]:
     # Squid 再設定とログ記録
     reconfig_msg = "スキップ"
     if reconfigure:
-        ok, reconfig_msg = reconfigure_squid()
+        _ok, reconfig_msg = reconfigure_squid()
 
     for exp_dom in expired_domains:
         log_control_operation(

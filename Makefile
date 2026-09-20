@@ -24,6 +24,10 @@ control: up-proxy
 test-unit:
 	uv run --with pytest --with pytest-asyncio --with httpx --with fastapi pytest tests/
 
+# コードの静的解析 (uv / ruff)
+lint:
+	uv run --with ruff ruff check .
+
 # 全コンテナの停止
 down:
 	docker compose down

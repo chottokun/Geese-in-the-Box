@@ -1,16 +1,18 @@
-import sys
 import os
+import sys
+
 import pytest
 from fastapi.testclient import TestClient
 
 # Add control-panel directory to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../control-panel")))
 
-from app.main import app
-import app.whitelist as whitelist_mod
-import app.killswitch as killswitch_mod
 import app.audit as audit_mod
+import app.killswitch as killswitch_mod
 import app.temp_whitelist as temp_whitelist_mod
+import app.whitelist as whitelist_mod
+from app.main import app
+
 
 @pytest.fixture
 def client(tmp_path):
@@ -39,7 +41,7 @@ def client(tmp_path):
     audit_mod.SQUID_LOG_FILE = str(logs_dir / "squid_access.json")
     audit_mod.STATUS_FILE = str(logs_dir / "status.json")
 
-    return TestClient(app)
+    return TestClient(app, raise_server_exceptions=False)
 
 def test_health_check(client):
     response = client.get("/health")
@@ -133,7 +135,7 @@ def test_temporary_whitelist_flow(client):
     data = temp_whitelist_mod._load_temp_data()
     assert "temp-api.example.com" in data
     # 期限を1秒前に設定
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
     data["temp-api.example.com"]["expires_at"] = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
     temp_whitelist_mod._save_temp_data(data)
 
@@ -156,7 +158,6 @@ def test_read_reverse_lines_and_log_filtering(client, tmp_path):
     import json
     logs_dir = tmp_path / "logs"
     squid_log = logs_dir / "squid_access.json"
-    
     # 複数行のダミーSquidログを書き込む
     entries = [
         {"time": "2026-09-18T10:00:00+09:00", "squid_status": "TCP_TUNNEL/200", "domain": "allowed1.com"},
@@ -165,8 +166,7 @@ def test_read_reverse_lines_and_log_filtering(client, tmp_path):
         {"time": "2026-09-18T10:03:00+09:00", "squid_status": "TCP_DENIED/403", "domain": "denied2.com"}
     ]
     with open(squid_log, "w", encoding="utf-8") as f:
-        for e in entries:
-            f.write(json.dumps(e) + "\n")
+        f.writelines(json.dumps(e) + "\n" for e in entries)
 
     # 全ログ取得（最新が先頭に来る）
     res = client.get("/api/logs?limit=10")
@@ -185,6 +185,7 @@ def test_read_reverse_lines_and_log_filtering(client, tmp_path):
 
 def test_purge_expired_tokens():
     import time
+
     import app.auth as auth_mod
 
     auth_mod.SESSION_TOKENS.clear()
@@ -217,3 +218,36 @@ def test_security_headers_and_exception_handling(client):
     # 3. 存在しないエンドポイントアクセスの確認
     res_404 = client.get("/non_existent_path_xyz")
     assert res_404.status_code == 200 # Catch-all route returns index.html for SPA
+
+def test_global_exception_handler(client):
+    from unittest.mock import patch
+    with patch("app.whitelist.parse_whitelist_file", side_effect=Exception("Test Error")):
+
+        res = client.get("/api/whitelist")
+        assert res.status_code == 500
+        data = res.json()
+        assert data["status"] == "error"
+        assert data["detail"] == "Internal Server Error"
+        assert data["message_ja"] == "サーバー内部エラーが発生しました。"
+        assert data["message_en"] == "An internal server error occurred."
+
+def test_temporary_whitelist_invalid_domain(client):
+    res = client.post("/api/whitelist/temporary", json={"domain": "invalid\ndomain.com", "duration_minutes": 10})
+    assert res.status_code == 400
+    assert res.json()["detail"] == "invalid_domain_format"
+
+def test_whitelist_abnormal_cases(client):
+    # 重複ドメインの追加
+    res = client.post("/api/whitelist", json={"domain": "github.com"})
+    assert res.status_code == 400
+    assert res.json()["detail"] == "domain_exists:github.com"
+
+    # 存在しないドメインの削除
+    res = client.delete("/api/whitelist/nonexistent.com")
+    assert res.status_code == 404
+    assert res.json()["detail"] == "domain_not_found:nonexistent.com"
+
+    # 存在しないドメインの切り替え
+    res = client.patch("/api/whitelist/nonexistent.com", json={"enabled": False})
+    assert res.status_code == 404
+    assert res.json()["detail"] == "domain_not_found:nonexistent.com"

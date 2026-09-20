@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 logger = logging.getLogger("control-panel")
 
@@ -32,6 +32,6 @@ def reconfigure_squid() -> tuple[bool, str]:
             logger.error(msg)
             return False, msg
     except Exception as e:
-        msg = f"Squid コンテナ操作中にエラーが発生しました: {str(e)}"
+        msg = f"Squid コンテナ操作中にエラーが発生しました: {e!s}"
         logger.error(msg)
         return False, msg

@@ -1,9 +1,9 @@
-import os
 import json
-from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel
-from typing import Optional, List, Any
+import os
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends, Query
+
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/api", tags=["audit"])
@@ -19,8 +19,8 @@ def log_control_operation(
     action: str,
     details: str,
     client_ip: str,
-    previous_state: Optional[str] = None,
-    new_state: Optional[str] = None
+    previous_state: str | None = None,
+    new_state: str | None = None
 ):
     entry = {
         "time": datetime.now(JST).isoformat(),
@@ -96,7 +96,7 @@ def get_status():
 @router.get("/logs", dependencies=[Depends(get_current_user)])
 def get_logs(
     limit: int = Query(50, ge=1, le=500),
-    filter_type: Optional[str] = Query(None, alias="filter")
+    filter_type: str | None = Query(None, alias="filter")
 ):
     if not os.path.exists(SQUID_LOG_FILE):
         return {"logs": [], "total": 0}

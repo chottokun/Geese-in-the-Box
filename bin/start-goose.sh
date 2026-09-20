@@ -4,6 +4,14 @@ set -euo pipefail
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 
+# 依存コマンドの確認
+for cmd in goose cat; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "エラー: 必須コマンド '$cmd' がインストールされていません。" >&2
+        exit 1
+    fi
+done
+
 # ==========================================
 # Goose セッション起動スクリプト
 # ==========================================

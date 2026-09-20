@@ -1,11 +1,12 @@
 import os
 import shutil
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+
+from app.audit import log_control_operation
 from app.auth import get_current_user
 from app.squid_service import reconfigure_squid
-from app.audit import log_control_operation
 
 router = APIRouter(prefix="/api/killswitch", tags=["killswitch"])
 
@@ -32,7 +33,7 @@ def is_all_blocked() -> bool:
 def get_killswitch_status():
     blocked = is_all_blocked()
     status = "blocked" if blocked else "online"
-    
+
     last_updated = None
     target_file = BACKUP_FILE if os.path.exists(BACKUP_FILE) else WHITELIST_FILE
     if os.path.exists(target_file):
@@ -89,7 +90,7 @@ def unblock_all(request: Request):
         if os.path.exists(WHITELIST_FILE):
             with open(WHITELIST_FILE, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-            new_lines = [l for l in lines if "# ALL BLOCKED" not in l]
+            new_lines = [line for line in lines if "# ALL BLOCKED" not in line]
             with open(WHITELIST_FILE, "w", encoding="utf-8") as f:
                 f.writelines(new_lines)
 
