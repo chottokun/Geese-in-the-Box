@@ -1,7 +1,17 @@
 import os
 import re
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from app.audit import log_control_operation
+from app.auth import get_current_user
+from app.squid_service import reconfigure_squid
+from app.temp_whitelist import (
+    get_temp_domains_info,
+    register_temp_domain,
+    remove_temp_domain,
+)
 
 DOMAIN_REGEX = re.compile(r"^[a-zA-Z0-9\.\_\-\:\*]+$")
 
@@ -11,15 +21,6 @@ def validate_domain_format(domain: str):
             status_code=400,
             detail="invalid_domain_format"
         )
-from typing import Optional
-from app.auth import get_current_user
-from app.squid_service import reconfigure_squid
-from app.audit import log_control_operation
-from app.temp_whitelist import (
-    get_temp_domains_info,
-    register_temp_domain,
-    remove_temp_domain
-)
 
 router = APIRouter(prefix="/api/whitelist", tags=["whitelist"])
 
@@ -71,7 +72,7 @@ def parse_whitelist_file() -> tuple[list[dict], list[str]]:
 
     return items, header_lines
 
-def write_whitelist_items(items: list[dict], header_lines: list[str] = None):
+def write_whitelist_items(items: list[dict], header_lines: list[str] | None = None):
     lines = list(header_lines) if header_lines else []
     for item in items:
         dom = item["domain"].strip()
@@ -79,7 +80,7 @@ def write_whitelist_items(items: list[dict], header_lines: list[str] = None):
             lines.append(f"{dom}\n")
         else:
             lines.append(f"# {dom}\n")
-            
+
     with open(WHITELIST_FILE, "w", encoding="utf-8") as f:
         f.writelines(lines)
 

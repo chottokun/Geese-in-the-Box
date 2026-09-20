@@ -1,9 +1,9 @@
 import os
 import secrets
 import time
-from fastapi import APIRouter, HTTPException, Depends, Request, Response, Cookie
+
+from fastapi import APIRouter, Cookie, HTTPException, Request, Response
 from pydantic import BaseModel
-from typing import Optional
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -32,7 +32,7 @@ def purge_expired_tokens() -> int:
         SESSION_TOKENS.pop(t, None)
     return len(expired)
 
-def is_valid_token(token: Optional[str]) -> bool:
+def is_valid_token(token: str | None) -> bool:
     if not IS_AUTH_ENABLED:
         return True
     if not token:
@@ -49,11 +49,11 @@ def is_valid_token(token: Optional[str]) -> bool:
 
 def get_current_user(
     request: Request,
-    cp_session: Optional[str] = Cookie(None)
+    cp_session: str | None = Cookie(None)
 ):
     if not IS_AUTH_ENABLED:
         return True
-    
+
     # Check Bearer token in Header
     auth_header = request.headers.get("Authorization")
     token = None
@@ -67,7 +67,7 @@ def get_current_user(
     return True
 
 @router.get("/status", response_model=AuthStatusResponse)
-def check_auth_status(request: Request, cp_session: Optional[str] = Cookie(None)):
+def check_auth_status(request: Request, cp_session: str | None = Cookie(None)):
     auth_header = request.headers.get("Authorization")
     token = None
     if auth_header and auth_header.startswith("Bearer "):
@@ -104,7 +104,7 @@ def login(body: LoginRequest, response: Response):
     return {"status": "ok", "token": token, "message": "logged_in", "message_ja": "ログインしました。", "message_en": "Logged in successfully."}
 
 @router.post("/logout")
-def logout(response: Response, request: Request, cp_session: Optional[str] = Cookie(None)):
+def logout(response: Response, request: Request, cp_session: str | None = Cookie(None)):
     auth_header = request.headers.get("Authorization")
     token = None
     if auth_header and auth_header.startswith("Bearer "):

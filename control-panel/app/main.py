@@ -1,14 +1,20 @@
-import os
 import asyncio
+import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from app.audit import router as audit_router
 from app.auth import router as auth_router
 from app.killswitch import router as killswitch_router
+from app.temp_whitelist import (
+    check_and_expire_temp_domains,
+    temp_whitelist_watcher_loop,
+)
 from app.whitelist import router as whitelist_router
-from app.audit import router as audit_router
-from app.temp_whitelist import temp_whitelist_watcher_loop, check_and_expire_temp_domains
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -82,12 +88,12 @@ def serve_spa(full_path: str):
     file_path = os.path.join(STATIC_DIR, full_path)
     if full_path and os.path.isfile(file_path):
         return FileResponse(file_path)
-    
+
     # Fallback to index.html for SPA routing
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    
+
     return JSONResponse(
         status_code=404,
         content={"detail": "Control Panel UI index.html not found"}
