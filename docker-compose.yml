@@ -172,6 +172,47 @@ services:
     depends_on:
       - egress-proxy
 
+  # ------------------------------------------------------------
+  # OpenCode Agent Container (隔離作業環境, オプショナル)
+  # ------------------------------------------------------------
+  opencode:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.opencode
+    image: opencode-agent:latest
+    container_name: opencode-agent
+    profiles: ["opencode"]
+    stdin_open: true
+    tty: true
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      - HTTP_PROXY=http://egress-proxy:3128
+      - HTTPS_PROXY=http://egress-proxy:3128
+      - http_proxy=http://egress-proxy:3128
+      - https_proxy=http://egress-proxy:3128
+      - NO_PROXY=localhost,127.0.0.1,egress-proxy
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TZ=${TZ:-Asia/Tokyo}
+      # --- LLM プロバイダー（使用するキー・エンドポイントのみ選択的に注入） ---
+      - OLLAMA_HOST=${OLLAMA_HOST:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+    shm_size: '${SHM_SIZE:-1gb}'
+    command: /bin/bash
+    volumes:
+      - ./workspace:/workspace:rw
+      - ./config/opencode:/home/sandboxuser/.config/opencode:rw
+    working_dir: /workspace
+    networks:
+      - internal-net
+    depends_on:
+      egress-proxy:
+        condition: service_healthy
+
 networks:
   internal-net:
     driver: bridge

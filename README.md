@@ -89,7 +89,20 @@ make test
   ```
   ACP サーバーを起動します。ホストマシン上で起動した公式 Goose Desktop アプリの接続先に `http://localhost:3284` を指定して作業します。
 
-### 5. コンテナの停止・後片付け
+### 5. OpenCode の実行 (オプショナル)
+本サンドボックス環境では、Goose に加えて **OpenCode** (https://opencode.ai/) も安全な隔離環境内で実行できます。
+
+1. **OpenCode イメージのビルド**:
+   ```bash
+   make build-opencode
+   ```
+2. **OpenCode の起動**:
+   ```bash
+   make run-opencode
+   ```
+   隔離されたターミナルセッションで OpenCode が起動し、Goose と同様に `/workspace` マウントと Squid プロキシを通じた通信制御が適用されます。
+
+### 6. コンテナの停止・後片付け
 作業を終了し、起動中のコンテナを停止する場合は以下のコマンドを実行します：
 ```bash
 make down

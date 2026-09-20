@@ -1,0 +1,46 @@
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+# 0. uv / uvx のマルチステージコピー（高速・安全・決定論的）
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# 1. 基本ツール + 開発ランタイム
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    ca-certificates \
+    git \
+    bzip2 \
+    unzip \
+    zip \
+    patch \
+    procps \
+    htop \
+    jq \
+    ripgrep \
+    tree \
+    build-essential \
+    python3 \
+    python3-pip \
+    python3-venv \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. OpenCode CLI のインストール
+RUN npm install -g opencode
+
+# 3. 非rootユーザーの作成
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} sandboxuser \
+    && useradd -m -u ${UID} -g sandboxuser -s /bin/bash sandboxuser \
+    && mkdir -p /workspace /home/sandboxuser/.config/opencode \
+    && chown -R sandboxuser:sandboxuser /home/sandboxuser /workspace
+
+USER sandboxuser
+WORKDIR /workspace
+
+CMD ["/bin/bash"]
