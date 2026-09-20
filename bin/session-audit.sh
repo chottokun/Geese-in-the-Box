@@ -4,6 +4,14 @@
 
 set -euo pipefail
 
+# 依存コマンドの確認
+for cmd in jq awk cut grep sort uniq wc head; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "エラー: 必須コマンド '$cmd' がインストールされていません。" >&2
+        exit 1
+    fi
+done
+
 LOG_DIR="logs/squid"
 echo "=== セッション別通信サマリー ==="
 printf "%-15s %-8s %-8s %-12s %-20s\n" "日付" "許可" "遮断" "総バイト(MB)" "トップドメイン"

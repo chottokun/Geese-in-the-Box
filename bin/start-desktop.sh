@@ -1,6 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+# 依存コマンドの確認
+for cmd in Xvfb dbus-launch fcitx5 startxfce4 x11vnc websockify xargs grep awk; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "エラー: 必須コマンド '$cmd' がインストールされていません。" >&2
+        exit 1
+    fi
+done
+
 # ==========================================
 # Goose-in-the-Box: GUI / noVNC 起動スクリプト
 # ==========================================

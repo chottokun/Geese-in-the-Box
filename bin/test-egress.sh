@@ -1,5 +1,13 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+
+# 依存コマンドの確認
+for cmd in curl grep; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "エラー: 必須コマンド '$cmd' がインストールされていません。" >&2
+        exit 1
+    fi
+done
 
 # ==========================================
 # Goose-in-the-Box 通信遮断テスト
