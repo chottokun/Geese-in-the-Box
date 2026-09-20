@@ -3,7 +3,15 @@
 # リアルタイムアラート監視スクリプト
 # SquidのJSONログを監視し、DENIED通信を検出してアラートを表示します。
 
-set -eo pipefail
+set -euo pipefail
+
+# 依存コマンドの確認
+for cmd in jq curl tail date; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "エラー: 必須コマンド '$cmd' がインストールされていません。" >&2
+        exit 1
+    fi
+done
 
 LOG_FILE="logs/squid/access.json"
 WEBHOOK_URL="${ALERT_WEBHOOK_URL:-}"
