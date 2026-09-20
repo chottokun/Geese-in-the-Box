@@ -39,7 +39,7 @@ def client(tmp_path):
     audit_mod.SQUID_LOG_FILE = str(logs_dir / "squid_access.json")
     audit_mod.STATUS_FILE = str(logs_dir / "status.json")
 
-    return TestClient(app)
+    return TestClient(app, raise_server_exceptions=False)
 
 def test_health_check(client):
     response = client.get("/health")
@@ -156,7 +156,6 @@ def test_read_reverse_lines_and_log_filtering(client, tmp_path):
     import json
     logs_dir = tmp_path / "logs"
     squid_log = logs_dir / "squid_access.json"
-    
     # 複数行のダミーSquidログを書き込む
     entries = [
         {"time": "2026-09-18T10:00:00+09:00", "squid_status": "TCP_TUNNEL/200", "domain": "allowed1.com"},
@@ -217,3 +216,36 @@ def test_security_headers_and_exception_handling(client):
     # 3. 存在しないエンドポイントアクセスの確認
     res_404 = client.get("/non_existent_path_xyz")
     assert res_404.status_code == 200 # Catch-all route returns index.html for SPA
+
+def test_global_exception_handler(client):
+    from unittest.mock import patch
+    with patch("app.whitelist.parse_whitelist_file", side_effect=Exception("Test Error")):
+        
+        res = client.get("/api/whitelist")
+        assert res.status_code == 500
+        data = res.json()
+        assert data["status"] == "error"
+        assert data["detail"] == "Internal Server Error"
+        assert data["message_ja"] == "サーバー内部エラーが発生しました。"
+        assert data["message_en"] == "An internal server error occurred."
+
+def test_temporary_whitelist_invalid_domain(client):
+    res = client.post("/api/whitelist/temporary", json={"domain": "invalid\ndomain.com", "duration_minutes": 10})
+    assert res.status_code == 400
+    assert res.json()["detail"] == "invalid_domain_format"
+
+def test_whitelist_abnormal_cases(client):
+    # 重複ドメインの追加
+    res = client.post("/api/whitelist", json={"domain": "github.com"})
+    assert res.status_code == 400
+    assert res.json()["detail"] == "domain_exists:github.com"
+
+    # 存在しないドメインの削除
+    res = client.delete("/api/whitelist/nonexistent.com")
+    assert res.status_code == 404
+    assert res.json()["detail"] == "domain_not_found:nonexistent.com"
+
+    # 存在しないドメインの切り替え
+    res = client.patch("/api/whitelist/nonexistent.com", json={"enabled": False})
+    assert res.status_code == 404
+    assert res.json()["detail"] == "domain_not_found:nonexistent.com"
