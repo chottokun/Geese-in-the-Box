@@ -185,14 +185,21 @@ services:
     stdin_open: true
     tty: true
     user: "${UID:-1000}:${GID:-1000}"
+    ports:
+      - "${HOST_BIND:-127.0.0.1}:${OPENCODE_NOVNC_PORT:-6081}:6081"
     environment:
       - HTTP_PROXY=http://egress-proxy:3128
       - HTTPS_PROXY=http://egress-proxy:3128
       - http_proxy=http://egress-proxy:3128
       - https_proxy=http://egress-proxy:3128
       - NO_PROXY=localhost,127.0.0.1,egress-proxy
+      - DISPLAY=:1
+      - RESOLUTION=${RESOLUTION:-1280x800x24}
       - LANG=C.UTF-8
       - LC_ALL=C.UTF-8
+      - GTK_IM_MODULE=fcitx
+      - QT_IM_MODULE=fcitx
+      - XMODIFIERS=@im=fcitx
       - TZ=${TZ:-Asia/Tokyo}
       # --- LLM プロバイダー（使用するキー・エンドポイントのみ選択的に注入） ---
       - OLLAMA_HOST=${OLLAMA_HOST:-}
@@ -206,6 +213,7 @@ services:
     volumes:
       - ./workspace:/workspace:rw
       - ./config/opencode:/home/sandboxuser/.config/opencode:rw
+      - ./bin/start-opencode-desktop.sh:/bin/start-opencode-desktop.sh:ro
     working_dir: /workspace
     networks:
       - internal-net

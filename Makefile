@@ -1,4 +1,4 @@
-.PHONY: build up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode
+.PHONY: build up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
@@ -47,9 +47,18 @@ session: up-proxy
 build-opencode:
 	docker compose --profile opencode build opencode
 
-# OpenCode 対話セッションの起動
+# OpenCode 対話セッションの起動 (TUI モード)
 run-opencode: up-proxy
 	docker compose --profile opencode run --rm opencode opencode
+
+# OpenCode GUI デスクトップ環境の起動 (Xfce4 + noVNC: http://localhost:6081/vnc.html)
+run-opencode-gui: up-proxy
+	@echo "=========================================================="
+	@echo " OpenCode GUI デスクトップ環境を起動しています..."
+	@echo " 起動後、ブラウザで以下を開いてください:"
+	@echo " 👉 http://localhost:6081/vnc.html"
+	@echo "=========================================================="
+	docker compose --profile opencode run --rm --service-ports opencode /bin/start-opencode-desktop.sh
 
 # Goose Desktop 向け ACP サーバー起動 (ポート 3284)
 serve: up-proxy

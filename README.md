@@ -97,10 +97,19 @@ make test
    make build-opencode
    ```
 2. **OpenCode の起動**:
-   ```bash
-   make run-opencode
-   ```
-   隔離されたターミナルセッションで OpenCode が起動し、Goose と同様に `/workspace` マウントと Squid プロキシを通じた通信制御が適用されます。
+   * **TUI (ターミナル対話モード - 推奨)**:
+     ```bash
+     make run-opencode
+     ```
+     外部ポートを開放せず、最も安全にターミナル内で対話・コード編集を行います。
+   * **GUI (noVNC 仮想デスクトップモード)**:
+     ```bash
+     make run-opencode-gui
+     ```
+     コンテナ内で X11 仮想画面と Fcitx5 日本語入力、OpenCode Desktop を起動します。
+     起動後、ブラウザで **`http://localhost:6081/vnc.html`** を開いて操作できます（Goose の 6080 ポートと競合せず並行稼働可能）。
+
+   いずれのモードでも `/workspace` マウントと Squid プロキシを通じた通信制御・キルスイッチが完全に適用されます。
 
 ### 6. コンテナの停止・後片付け
 作業を終了し、起動中のコンテナを停止する場合は以下のコマンドを実行します：
