@@ -51,3 +51,6 @@ registry.npmjs.org
 .sakura.ad.jp
 
 
+
+# --- OpenCode ---
+.opencode.ai

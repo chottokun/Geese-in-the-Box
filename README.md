@@ -6,7 +6,7 @@
 [![Goose](https://img.shields.io/badge/Goose-AI_Agent-orange)](https://block.github.io/goose/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-[English](README.en.md) | [日本語](README.md)
+[English](README.en.md) | [日本語](README.md) | [📖 技術ドキュメント (LLM-Wiki)](docs/README.md)
 
 AIエージェント「Goose」を安全に実行するための、Dockerベースのネットワーク隔離・監査サンドボックスです。
 
@@ -89,7 +89,29 @@ make test
   ```
   ACP サーバーを起動します。ホストマシン上で起動した公式 Goose Desktop アプリの接続先に `http://localhost:3284` を指定して作業します。
 
-### 5. コンテナの停止・後片付け
+### 5. OpenCode の実行 (オプショナル)
+本サンドボックス環境では、Goose に加えて **OpenCode** (https://opencode.ai/) も安全な隔離環境内で実行できます。
+
+1. **OpenCode イメージのビルド**:
+   ```bash
+   make build-opencode
+   ```
+2. **OpenCode の起動**:
+   * **TUI (ターミナル対話モード - 推奨)**:
+     ```bash
+     make run-opencode
+     ```
+     外部ポートを開放せず、最も安全にターミナル内で対話・コード編集を行います。
+   * **GUI (noVNC 仮想デスクトップモード)**:
+     ```bash
+     make run-opencode-gui
+     ```
+     コンテナ内で X11 仮想画面と Fcitx5 日本語入力、OpenCode Desktop を起動します。
+     起動後、ブラウザで **`http://localhost:6081/vnc.html`** を開いて操作できます（Goose の 6080 ポートと競合せず並行稼働可能）。
+
+   いずれのモードでも `/workspace` マウントと Squid プロキシを通じた通信制御・キルスイッチが完全に適用されます。
+
+### 6. コンテナの停止・後片付け
 作業を終了し、起動中のコンテナを停止する場合は以下のコマンドを実行します：
 ```bash
 make down

@@ -6,7 +6,7 @@
 [![Goose](https://img.shields.io/badge/Goose-AI_Agent-orange)](https://block.github.io/goose/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-[English](README.en.md) | [日本語](README.md)
+[English](README.en.md) | [日本語](README.md) | [📖 Technical Docs (LLM-Wiki)](docs/README.md)
 
 Goose-in-the-Box is a Docker-based network-isolated and audited sandbox designed for safely running the AI agent "Goose".
 
@@ -89,7 +89,29 @@ Once the tests pass, launch Goose in one of the following modes depending on you
   ```
   Launches the Agent Communication Protocol (ACP) server. Connect your host Goose Desktop application to `http://localhost:3284`.
 
-### 5. Teardown & Stopping Containers
+### 5. Running OpenCode (Optional)
+In addition to Goose, this sandbox environment allows you to run **OpenCode** (https://opencode.ai/) securely within the isolated environment.
+
+1. **Build the OpenCode Image**:
+   ```bash
+   make build-opencode
+   ```
+2. **Launch OpenCode**:
+   * **TUI (Interactive Terminal Mode - Recommended)**:
+     ```bash
+     make run-opencode
+     ```
+     Operates entirely within the terminal with zero external ports exposed for maximum security.
+   * **GUI (noVNC Virtual Desktop Mode)**:
+     ```bash
+     make run-opencode-gui
+     ```
+     Launches an isolated X11 virtual desktop with Fcitx5 Japanese input and OpenCode Desktop.
+     Access it from your browser at **`http://localhost:6081/vnc.html`** (runs concurrently without port conflict with Goose's port 6080).
+
+   In both modes, the `/workspace` mount and Squid proxy traffic controls / killswitches are fully applied.
+
+### 6. Teardown & Stopping Containers
 To stop all running sandbox containers and free resources:
 ```bash
 make down

@@ -1,8 +1,30 @@
-.PHONY: build up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control
+.PHONY: build up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
 # ==========================================
+
+# ヘルプ一覧の表示
+help:
+	@echo "=========================================================="
+	@echo " Goose-in-the-Box 使い方"
+	@echo "=========================================================="
+	@echo " [初期設定・基本操作]"
+	@echo "   make build           : コンテナイメージのビルド"
+	@echo "   make down            : 全コンテナの停止"
+	@echo "   make test            : 通信遮断テストの実行"
+	@echo "   make control         : 統合コントロールパネルの起動 (http://localhost:6080/control/)"
+	@echo ""
+	@echo " [Goose 操作]"
+	@echo "   make session         : Goose CLI 対話セッションの起動 (ターミナル)"
+	@echo "   make gui             : Goose GUI デスクトップ環境の起動 (http://localhost:6080/vnc.html)"
+	@echo "   make serve           : Goose Desktop 向け ACP サーバー起動"
+	@echo ""
+	@echo " [OpenCode 操作]"
+	@echo "   make build-opencode  : OpenCode コンテナのビルド"
+	@echo "   make run-opencode    : OpenCode 対話セッションの起動 (ターミナル)"
+	@echo "   make run-opencode-gui: OpenCode GUI デスクトップ環境の起動 (http://localhost:6081/vnc.html)"
+	@echo "=========================================================="
 
 # コンテナイメージのビルド
 build:
@@ -42,6 +64,24 @@ test: up-proxy
 # Goose CLI 対話セッションの起動 (AGENTS.md / ルール自動読み込み)
 session: up-proxy
 	docker compose run --rm goose-agent /bin/start-goose.sh
+
+# OpenCode コンテナのビルド
+build-opencode:
+	docker compose --profile opencode build opencode
+
+# OpenCode 対話セッションの起動 (TUI モード)
+run-opencode: up-proxy
+	docker compose --profile opencode run --rm opencode opencode
+
+# OpenCode GUI デスクトップ環境の起動 (Xfce4 + noVNC: http://localhost:6081/vnc.html)
+run-opencode-gui: up-proxy
+	@docker rm -f opencode-agent 2>/dev/null || true
+	@echo "=========================================================="
+	@echo " OpenCode GUI デスクトップ環境を起動しています..."
+	@echo " 起動後、ブラウザで以下を開いてください:"
+	@echo " 👉 http://localhost:6081/vnc.html"
+	@echo "=========================================================="
+	docker compose --profile opencode run --rm --name opencode-agent opencode /bin/start-opencode-desktop.sh
 
 # Goose Desktop 向け ACP サーバー起動 (ポート 3284)
 serve: up-proxy
