@@ -6,7 +6,7 @@
 [![Goose](https://img.shields.io/badge/Goose-AI_Agent-orange)](https://block.github.io/goose/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-[English](README.en.md) | [日本語](README.md)
+[English](README.en.md) | [日本語](README.md) | [📖 Technical Docs (LLM-Wiki)](docs/README.md)
 
 Goose-in-the-Box is a Docker-based network-isolated and audited sandbox designed for safely running the AI agent "Goose".
 

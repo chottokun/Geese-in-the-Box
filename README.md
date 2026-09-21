@@ -6,7 +6,7 @@
 [![Goose](https://img.shields.io/badge/Goose-AI_Agent-orange)](https://block.github.io/goose/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-[English](README.en.md) | [日本語](README.md)
+[English](README.en.md) | [日本語](README.md) | [📖 技術ドキュメント (LLM-Wiki)](docs/README.md)
 
 AIエージェント「Goose」を安全に実行するための、Dockerベースのネットワーク隔離・監査サンドボックスです。
 
