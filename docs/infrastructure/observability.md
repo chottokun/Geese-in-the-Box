@@ -4,7 +4,7 @@ title: "可観測性と監査ダッシュボード"
 description: "Dozzle によるリアルタイムログ監視と、自動集計による可観測性レポート (HTML/JSON/MD) の生成プロセス"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["observability", "dozzle", "audit", "report", "logs"]
 ---

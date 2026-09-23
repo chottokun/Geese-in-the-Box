@@ -4,7 +4,7 @@ title: "Ingress ルーティングと監査"
 description: "Nginx による外部からエージェントへの内向き通信 (Ingress) 中継、WebSocket サポート、および JSON 構造化監査ログの仕組み"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["nginx", "ingress", "websocket", "novnc", "audit"]
 ---

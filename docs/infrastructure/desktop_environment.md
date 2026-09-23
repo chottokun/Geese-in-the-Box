@@ -4,7 +4,7 @@ title: "仮想デスクトップ環境"
 description: "Xvfb, Xfce4, Fcitx5, noVNC を用いたコンテナ内ブラウザ仮想デスクトップ環境の構築手法"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["desktop", "xvfb", "xfce4", "novnc", "fcitx5"]
 ---

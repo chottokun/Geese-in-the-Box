@@ -4,7 +4,7 @@ title: "ワークスペース共有と協調ワークフロー"
 description: "ホストとエージェント間のファイル同期 (workspace) およびパーミッション (UID/GID) 統一による協調手法"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["workspace", "workflow", "collaboration", "permission"]
 ---

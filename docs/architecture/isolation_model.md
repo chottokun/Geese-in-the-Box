@@ -4,7 +4,7 @@ title: "ネットワーク隔離と多層防御モデル"
 description: "Docker の internal ネットワークによる L3/L4 隔離と Squid/Nginx による L7 プロキシの多層防御アーキテクチャ"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["docker", "network", "security", "isolation", "proxy"]
 ---

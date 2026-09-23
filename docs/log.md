@@ -4,7 +4,7 @@ title: "OKF 運用変更ログ"
 description: "LLM-Wiki (OKF) ナレッジベースの作成・更新履歴"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["log", "changelog"]
 ---

@@ -4,7 +4,7 @@ title: "統合コントロールパネル (Control Panel)"
 description: "FastAPI によるバックエンド API と Web UI で構成される、ホワイトリストとキルスイッチの統合管理基盤"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["fastapi", "ui", "whitelist", "killswitch", "ttl"]
 ---

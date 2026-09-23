@@ -4,7 +4,7 @@ title: "Goose, OpenCode, OpenClaw の比較・並行運用"
 description: "Goose Agent, OpenCode Agent, OpenClaw Agent の特徴比較と、同一サンドボックス内での並行運用設計"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["goose", "opencode", "openclaw", "agent", "comparison", "parallel"]
 ---

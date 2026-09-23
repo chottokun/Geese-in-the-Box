@@ -4,7 +4,7 @@ title: "Egress 通信制御とプロキシキルスイッチ"
 description: "Squid を用いた Egress（外向き）通信のホワイトリスト制御、CONNECT 監査、および緊急キルスイッチの仕組み"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
-  - { by: "human:nobuhiko", at: "2026-09-21T10:45:00Z" }
+  - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }
 status: "stable"
 tags: ["squid", "egress", "proxy", "security", "whitelist"]
 ---
