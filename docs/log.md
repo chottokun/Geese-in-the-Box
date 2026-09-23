@@ -26,3 +26,9 @@ tags: ["log", "changelog"]
 - **追加**: `docs/domain/agents_comparison.md` (Goose と OpenCode の比較)
 - **追加**: `docs/domain/workspace_sharing.md` (共有ワークスペースの運用)
 - **備考**: OKF v0.2 のテンプレートに基づき、全体的な技術ドキュメント群を初版として作成。
+
+## [2026-09-24] OpenClaw 2.0 モデルルーティング・フォールバック仕様の追記
+
+- **更新**: `docs/domain/agents_comparison.md`
+  - Primary Model と Utility Model の分離仕様、および OpenAI 互換エンドポイント利用時の既定ユーティリティモデル (`gpt-5.6-luna` 等) 自動フォールバック（Graceful Fallback）挙動についての技術詳細を追記。
+
