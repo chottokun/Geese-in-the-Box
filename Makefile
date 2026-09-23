@@ -1,4 +1,5 @@
-.PHONY: build up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui
+.PHONY: build up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui build-openclaw run-openclaw run-openclaw-gui stop-openclaw stop-openclaw-gui
+
 
 # ==========================================
 # Goose-in-the-Box (Docker 隔離 & 通信制御)
@@ -24,6 +25,12 @@ help:
 	@echo "   make build-opencode  : OpenCode コンテナのビルド"
 	@echo "   make run-opencode    : OpenCode 対話セッションの起動 (ターミナル)"
 	@echo "   make run-opencode-gui: OpenCode GUI デスクトップ環境の起動 (http://localhost:6081/vnc.html)"
+	@echo ""
+	@echo " [OpenClaw 操作]"
+	@echo "   make build-openclaw  : OpenClaw コンテナのビルド"
+	@echo "   make run-openclaw    : OpenClaw 対話セッションの起動 (ターミナル)"
+	@echo "   make run-openclaw-gui: OpenClaw GUI デスクトップ環境の起動 (http://localhost:6082/vnc.html)"
+	@echo "   make stop-openclaw   : OpenClaw コンテナの停止"
 	@echo "=========================================================="
 
 # コンテナイメージのビルド
@@ -82,6 +89,30 @@ run-opencode-gui: up-proxy
 	@echo " 👉 http://localhost:6081/vnc.html"
 	@echo "=========================================================="
 	docker compose --profile opencode run --rm --name opencode-agent opencode /bin/start-opencode-desktop.sh
+
+# OpenClaw コンテナのビルド
+build-openclaw:
+	docker compose --profile openclaw build openclaw
+
+# OpenClaw 対話セッションの起動 (TUI モード)
+run-openclaw: up-proxy
+	docker compose --profile openclaw run --rm openclaw openclaw tui
+
+# OpenClaw GUI デスクトップ環境の起動
+run-openclaw-gui: up-proxy
+	@echo "=========================================================="
+	@echo " OpenClaw GUI デスクトップ環境を起動しています..."
+	@echo " 起動後、ブラウザで以下を開いてください:"
+	@echo " 👉 noVNC 起動 (ポート 6082)"
+	@echo " 👉 OpenClaw UI 起動 (ポート 18789)"
+	@echo "=========================================================="
+	docker compose --profile openclaw run --rm --name openclaw-agent openclaw /bin/start-openclaw-desktop.sh
+
+# OpenClaw コンテナの停止
+stop-openclaw stop-openclaw-gui:
+	docker compose --profile openclaw stop openclaw
+	@docker rm -f openclaw-agent 2>/dev/null || true
+
 
 # Goose Desktop 向け ACP サーバー起動 (ポート 3284)
 serve: up-proxy

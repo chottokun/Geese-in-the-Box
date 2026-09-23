@@ -1,0 +1,88 @@
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+# 0. uv / uvx のマルチステージコピー（高速・安全・決定論的）
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# Node.js 24 のマルチステージコピー (OpenClaw 2.0 の Node >= 24.16.0 要件を満たす)
+COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/
+COPY --from=node:24-bookworm-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
+# 1. 基本ツール + GUI/noVNC + 日本語入力 + 開発ランタイム + Webブラウザ (firefox-esr)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    ca-certificates \
+    git \
+    bzip2 \
+    unzip \
+    zip \
+    patch \
+    procps \
+    htop \
+    jq \
+    ripgrep \
+    tree \
+    nano \
+    less \
+    zenity \
+    # ビルドツール
+    build-essential \
+    python3 \
+    python3-pip \
+    python3-venv \
+    # Web ブラウザ
+    firefox-esr \
+    # GUI デスクトップ環境 (Xfce4 + Xvfb + D-Bus)
+    xvfb \
+    xfce4 \
+    xfce4-terminal \
+    dbus-x11 \
+    dbus \
+    # VNC & Webブラウザ接続 (noVNC)
+    x11vnc \
+    novnc \
+    websockify \
+    # 日本語フォント
+    fonts-noto-cjk \
+    fonts-noto-color-emoji \
+    # 日本語入力システム (Fcitx5 + Mozc)
+    fcitx5 \
+    fcitx5-mozc \
+    fcitx5-frontend-gtk2 \
+    fcitx5-frontend-gtk3 \
+    fcitx5-frontend-qt5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. OpenClaw 2.0 のインストール
+RUN npm install -g openclaw@latest
+
+
+# 3. 非rootユーザーの作成
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} sandboxuser \
+    && useradd -m -u ${UID} -g sandboxuser -s /bin/bash sandboxuser \
+    && mkdir -p /workspace /home/sandboxuser/.openclaw /home/sandboxuser/.config/fcitx5 /home/sandboxuser/Desktop \
+    && chown -R sandboxuser:sandboxuser /home/sandboxuser /workspace
+
+# 4. Fcitx5、Git 初期プロファイル設定
+RUN printf "[Groups/0]\nName=Default\nDefault Layout=jp\nDefaultIM=mozc\n\n[Groups/0/Items/0]\nName=keyboard-jp\nLayout=\n\n[Groups/0/Items/1]\nName=mozc\nLayout=\n\n[GroupOrder]\n0=Default\n" > /home/sandboxuser/.config/fcitx5/profile \
+    && su - sandboxuser -c "git config --global user.name 'OpenClaw Agent' \
+        && git config --global user.email 'openclaw@sandbox.local' \
+        && git config --global --add safe.directory /workspace \
+        && git config --global init.defaultBranch main" \
+    && chown -R sandboxuser:sandboxuser /home/sandboxuser/.config /home/sandboxuser/Desktop /home/sandboxuser/.gitconfig
+
+# 5. 実行スクリプトのコピー
+COPY bin/start-openclaw-desktop.sh /bin/start-openclaw-desktop.sh
+RUN chmod +x /bin/start-openclaw-desktop.sh
+
+USER sandboxuser
+WORKDIR /workspace
+
+CMD ["/bin/bash"]

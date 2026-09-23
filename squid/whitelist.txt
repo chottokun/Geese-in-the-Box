@@ -54,3 +54,12 @@ registry.npmjs.org
 
 # --- OpenCode ---
 .opencode.ai
+
+# --- OpenClaw ---
+.openclaw.ai
+.clawhub.ai
+
+# --- メッセージング連携 ---
+api.telegram.org
+discord.com
+gateway.discord.gg

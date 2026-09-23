@@ -36,7 +36,7 @@ Docker internal ネットワーク隔離とプロキシ多層防御に関する�
 
 ### 📁 ドメイン (Domain) - Tier 3
 AI エージェントの並行運用やワークスペース管理などの運用知識。
-- [Goose と OpenCode の比較・並行運用](domain/agents_comparison.md)
+- [Goose, OpenCode, OpenClaw の比較・並行運用](domain/agents_comparison.md)
 - [ワークスペース共有と協調ワークフロー](domain/workspace_sharing.md)
 
 ## 変更ログ

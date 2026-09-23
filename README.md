@@ -111,7 +111,38 @@ make test
 
    いずれのモードでも `/workspace` マウントと Squid プロキシを通じた通信制御・キルスイッチが完全に適用されます。
 
-### 6. コンテナの停止・後片付け
+### 6. OpenClaw 2.0 の実行 (オプショナル)
+本環境では、最新のAIエージェントである **OpenClaw 2.0** もサポートしています。
+
+1. **OpenClaw イメージのビルド**:
+   ```bash
+   make build-openclaw
+   ```
+2. **OpenClaw の起動**:
+   * **TUI (ターミナル対話モード)**:
+     ```bash
+     make run-openclaw
+     ```
+   * **GUI (noVNC 仮想デスクトップモード)**:
+     ```bash
+     make run-openclaw-gui
+     ```
+     起動後、ブラウザで **`http://localhost:6082/vnc.html`** を開いて操作できます。また、OpenClaw の Control UI には **`http://localhost:18789`** でアクセスできます。
+
+3. **OpenClaw の停止**:
+   ```bash
+   make stop-openclaw
+   ```
+
+**メッセージング連携 (Telegram / Discord)**:
+OpenClaw 2.0 では、外部のメッセージングアプリ（Telegram や Discord）からの指示を受け付けることができます。
+連携を有効にするには、`.env` ファイルに以下のトークンを設定し、ホワイトリスト（`squid/whitelist.txt`）に各サービスのAPIドメイン（例: `api.telegram.org`、`discord.com`）を登録した上でコンテナを起動してください。
+```env
+OPENCLAW_TELEGRAM_TOKEN=your_telegram_token
+OPENCLAW_DISCORD_TOKEN=your_discord_token
+```
+
+### 7. コンテナの停止・後片付け
 作業を終了し、起動中のコンテナを停止する場合は以下のコマンドを実行します：
 ```bash
 make down
@@ -219,6 +250,8 @@ Squid の JSON ログ (`/var/log/squid/access.json`) をバックグラウンド
 | **`OPENAI_HOST`** | OpenAI互換ホスト名 (プロバイダー解決用) | `https://api.openai.com` |
 | **`OLLAMA_HOST`** | ローカル LLM ホスト接続先 (ポート11434) | `http://host.docker.internal:11434` |
 | **`NOVNC_PORT`** | noVNC Web UI ポート（ブラウザ接続先） | `6080` |
+| **`OPENCLAW_NOVNC_PORT`** | OpenClaw noVNC Web UI ポート | `6082` |
+| **`OPENCLAW_CONTROL_UI_PORT`** | OpenClaw Control UI ポート | `18789` |
 | **`GOOSE_SERVE_PORT`** | Goose ACP サーバー公開ポート | `3284` |
 | **`SQUID_PORT`** | Squid 監査プロキシポート | `3128` |
 | **`DOZZLE_PORT`** | Dozzle Web リアルタイムログ監視ポート | `8080` |
