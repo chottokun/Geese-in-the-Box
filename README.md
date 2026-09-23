@@ -1,4 +1,4 @@
-# Goose-in-the-Box: AI エージェントのネットワーク隔離・監査サンドボックス
+# Geese-in-the-Box (旧 Goose-in-the-Box): 複数AIエージェントのネットワーク隔離・監査サンドボックス基盤
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/goose-in-the-box/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

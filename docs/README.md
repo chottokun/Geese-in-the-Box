@@ -1,6 +1,6 @@
 ---
 type: "index"
-title: "Goose-in-the-Box LLM-Wiki 全体マップ"
+title: "Geese-in-the-Box LLM-Wiki 全体マップ"
 description: "Goose-in-the-Box のアーキテクチャ・運用・ドメイン知識をまとめた LLM-Wiki のインデックスと全体マップ"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
@@ -9,9 +9,9 @@ status: "stable"
 tags: ["index", "wiki", "okf"]
 ---
 
-# Goose-in-the-Box LLM-Wiki 全体マップ
+# Geese-in-the-Box (旧 Goose-in-the-Box) LLM-Wiki 全体マップ
 
-本ドキュメントは、Goose-in-the-Box (GitB) の技術アーキテクチャ、インフラ構成、ドメイン知識を統合した LLM-Wiki（ナレッジベース）のインデックスです。
+本ドキュメントは、Geese-in-the-Box (旧 Goose-in-the-Box) の技術アーキテクチャ、インフラ構成、ドメイン知識を統合した LLM-Wiki（ナレッジベース）のインデックスです。
 各ドキュメントは OKF (Open Knowledge Format) v0.2 に準拠し、技術者および AI エージェントがシステム構成を深く理解するために構造化されています。
 
 ## 信頼度ティア (Reliability Tiers)
