@@ -212,9 +212,38 @@ openclaw gateway run --force --port "$GATEWAY_PORT" --allow-unconfigured --auth 
 sleep 4
 
 
-# 8. firefox-esr で Control UI を開く (トークン認証付き)
-echo "8. Firefox で Control UI を起動..."
-firefox "http://localhost:${GATEWAY_PORT}/?token=${GATEWAY_TOKEN}" &
+# 8. デスクトップショートカットの作成
+DESKTOP_DIR="/home/sandboxuser/Desktop"
+mkdir -p "$DESKTOP_DIR"
+CONTROL_UI_URL="http://localhost:${GATEWAY_PORT}/?token=${GATEWAY_TOKEN}"
+
+cat <<EOF > "$DESKTOP_DIR/openclaw.desktop"
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OpenClaw Control UI
+Comment=Open OpenClaw Control UI in Firefox
+Exec=firefox "$CONTROL_UI_URL"
+Icon=firefox-esr
+Terminal=false
+StartupNotify=true
+Categories=Network;WebBrowser;
+EOF
+chmod +x "$DESKTOP_DIR/openclaw.desktop"
+
+# 9. Gateway 起動待機 (ヘルスチェック)
+echo "8. OpenClaw Gateway の起動を待機中..."
+for i in $(seq 1 30); do
+    if curl -s -f -o /dev/null "http://127.0.0.1:${GATEWAY_PORT}/" 2>/dev/null; then
+        echo "✓ OpenClaw Gateway が正常に起動しました (試行: ${i}回目)"
+        break
+    fi
+    sleep 1
+done
+
+# 10. firefox-esr で Control UI を開く (トークン認証付き)
+echo "9. Firefox で Control UI を起動..."
+firefox "$CONTROL_UI_URL" &
 
 
 

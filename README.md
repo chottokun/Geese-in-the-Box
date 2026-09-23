@@ -127,7 +127,7 @@ make test
      ```bash
      make run-openclaw-gui
      ```
-     起動後、ブラウザで **`http://localhost:6082/vnc.html`** を開いて操作できます。また、OpenClaw の Control UI には **`http://localhost:18789`** でアクセスできます。
+     起動後、ブラウザで **`http://localhost:6082/vnc.html`** を開いて操作できます。仮想デスクトップ上には **`OpenClaw Control UI`** のショートカットが配置されており、クリックすることでいつでも Control UI を起動・再表示できます。また、ホスト側からは **`http://localhost:18789`** で直接アクセスすることも可能です。
 
 3. **OpenClaw の停止**:
    ```bash
