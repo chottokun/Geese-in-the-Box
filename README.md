@@ -204,7 +204,6 @@ Squid の JSON ログ (`/var/log/squid/access.json`) をバックグラウンド
 | **`make unblock`** | キルスイッチ解除（元のホワイトリストを復元して即時反映） |
 | **`make report`** | 監査ダッシュボードおよび JSON/Markdown API の手動即時生成 |
 | **`make log-rotate`** | 監査ログの手動ローテーション実行 |
-```
 
 ---
 
