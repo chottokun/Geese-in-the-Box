@@ -301,7 +301,7 @@ elif any(a["severity"] == "warning" for a in alerts):
     health_status = "⚠️ 警告・確認推奨 (Warning)"
 
 md_lines = [
-    f"# Goose-in-the-Box 監査サマリー ({now_iso[:19]})",
+    f"# Geese-in-the-Box 監査サマリー ({now_iso[:19]})",
     "",
     f"### 総合状態: {health_status}",
     f"- **総リクエスト**: {total_requests:,} 件 (許可: {allowed_requests:,} / 遮断: {denied_requests:,} | 遮断率: {deny_rate:.2f}%)",
@@ -356,7 +356,7 @@ html_content = f"""<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="30">
-    <title>Goose-in-the-Box 監査・可観測性ダッシュボード</title>
+    <title>Geese-in-the-Box 監査・可観測性ダッシュボード</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -479,7 +479,7 @@ html_content = f"""<!DOCTYPE html>
 
 <header>
     <h1>
-        <span id="titleText">🛡️ Goose-in-the-Box 監査 & 可観測性ダッシュボード</span>
+        <span id="titleText">🛡️ Geese-in-the-Box 監査 & 可観測性ダッシュボード</span>
         <span id="healthBadge" class="badge badge-{ 'healthy' if health_status_key == 'healthy' else ('crit' if health_status_key == 'crit' else 'warn') }">{health_status}</span>
     </h1>
     <div class="header-actions">
@@ -632,7 +632,7 @@ html_content += f"""
     const reportTranslations = {{
         ja: {{
             langBtn: "🌐 English",
-            titleText: "🛡️ Goose-in-the-Box 監査 & 可観測性ダッシュボード",
+            titleText: "🛡️ Geese-in-the-Box 監査 & 可観測性ダッシュボード",
             healthStatus: "{health_status}",
             navControl: "🎛️ コントロールパネル",
             navVnc: "🖥️ noVNC 操作",
@@ -677,7 +677,7 @@ html_content += f"""
         }},
         en: {{
             langBtn: "🌐 日本語",
-            titleText: "🛡️ Goose-in-the-Box Audit & Observability Dashboard",
+            titleText: "🛡️ Geese-in-the-Box Audit & Observability Dashboard",
             healthStatus: "{'✅ Healthy' if health_status_key == 'healthy' else ('🚨 Critical' if health_status_key == 'crit' else '⚠️ Warning')}",
             navControl: "🎛️ Control Panel",
             navVnc: "🖥️ noVNC Desktop",

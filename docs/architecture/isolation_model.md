@@ -11,7 +11,7 @@ tags: ["docker", "network", "security", "isolation", "proxy"]
 
 # ネットワーク隔離と多層防御モデル
 
-Goose-in-the-Box における最も重要なセキュリティ基盤は、AI エージェントが実行されるコンテナ環境をホストおよび外部インターネットから確実に隔離する「多層防御 (Defense in Depth)」アプローチです。
+Geese-in-the-Box における最も重要なセキュリティ基盤は、AI エージェントが実行されるコンテナ環境をホストおよび外部インターネットから確実に隔離する「多層防御 (Defense in Depth)」アプローチです。
 
 ## 基本アーキテクチャ (Defense in Depth)
 

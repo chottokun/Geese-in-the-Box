@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
         pass
 
 app = FastAPI(
-    title="Goose-in-the-Box Control Panel API",
+    title="Geese-in-the-Box Control Panel API",
     description="監査ダッシュボード + キルスイッチ + 通信制御 統合 API",
     version="2.1.0",
     lifespan=lifespan

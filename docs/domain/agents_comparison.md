@@ -11,7 +11,7 @@ tags: ["goose", "opencode", "openclaw", "agent", "comparison", "parallel"]
 
 # Goose, OpenCode, OpenClaw の比較・並行運用
 
-Goose-in-the-Box は、Block チームが開発する **Goose Agent** 、オープンソースのコーディングエージェント **OpenCode**、そして最新のエージェント **OpenClaw** を、同じ安全なサンドボックス境界内でサポートします。
+Geese-in-the-Box は、Block チームが開発する **Goose Agent** 、オープンソースのコーディングエージェント **OpenCode**、そして最新のエージェント **OpenClaw** を、同じ安全なサンドボックス境界内でサポートします。
 
 ## エージェントの比較
 

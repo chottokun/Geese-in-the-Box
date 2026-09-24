@@ -6,7 +6,7 @@ let currentLang = localStorage.getItem("app_lang") || "ja";
 const translations = {
   ja: {
     langBtnText: "🌐 English",
-    appTitle: "🎛️ Goose-in-the-Box コントロールパネル",
+    appTitle: "🎛️ Geese-in-the-Box コントロールパネル",
     navReport: "📊 監査レポート",
     navVnc: "🖥️ noVNC 操作",
     navDozzle: "📜 Dozzle ログ",
@@ -87,7 +87,7 @@ const translations = {
   },
   en: {
     langBtnText: "🌐 日本語",
-    appTitle: "🎛️ Goose-in-the-Box Control Panel",
+    appTitle: "🎛️ Geese-in-the-Box Control Panel",
     navReport: "📊 Audit Report",
     navVnc: "🖥️ noVNC Desktop",
     navDozzle: "📜 Dozzle Logs",

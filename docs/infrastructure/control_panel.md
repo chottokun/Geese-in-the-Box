@@ -11,7 +11,7 @@ tags: ["fastapi", "ui", "whitelist", "killswitch", "ttl"]
 
 # 統合コントロールパネル (Control Panel)
 
-`control-panel` は、Goose-in-the-Box におけるネットワーク制御・監査を直感的な Web UI および REST API を通じて行うための独立したサービスです。
+`control-panel` は、Geese-in-the-Box におけるネットワーク制御・監査を直感的な Web UI および REST API を通じて行うための独立したサービスです。
 
 ## 技術スタック
 

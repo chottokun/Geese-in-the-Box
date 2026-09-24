@@ -1,7 +1,7 @@
 [project]
 name = "goose-in-the-box"
 version = "0.1.0"
-description = "Goose-in-the-Box: Secure AI Agent Sandbox"
+description = "Geese-in-the-Box: Secure AI Agent Sandbox"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

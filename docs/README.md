@@ -1,7 +1,7 @@
 ---
 type: "index"
 title: "Geese-in-the-Box LLM-Wiki 全体マップ"
-description: "Goose-in-the-Box のアーキテクチャ・運用・ドメイン知識をまとめた LLM-Wiki のインデックスと全体マップ"
+description: "Geese-in-the-Box のアーキテクチャ・運用・ドメイン知識をまとめた LLM-Wiki のインデックスと全体マップ"
 generated: { by: "jules/1.0", at: "2026-09-21T10:40:00Z" }
 verified:
   - { by: "human:Chottokun", at: "2026-09-21T10:45:00Z" }

@@ -10,7 +10,7 @@ for cmd in Xvfb dbus-launch fcitx5 startxfce4 x11vnc websockify xargs grep awk; 
 done
 
 # ==========================================
-# Goose-in-the-Box: GUI / noVNC 起動スクリプト
+# Geese-in-the-Box: GUI / noVNC 起動スクリプト
 # ==========================================
 echo "=== Goose Desktop 隔離 GUI 環境を起動中 ==="
 

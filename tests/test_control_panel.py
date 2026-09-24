@@ -112,7 +112,7 @@ def test_operation_audit_log(client):
 def test_spa_index_route(client):
     res = client.get("/")
     assert res.status_code == 200
-    assert "Goose-in-the-Box コントロールパネル" in res.text
+    assert "Geese-in-the-Box コントロールパネル" in res.text
 
 def test_temporary_whitelist_flow(client):
     # 1. 一時許可追加 (30分)
