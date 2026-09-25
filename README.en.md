@@ -101,7 +101,14 @@ Automatically aggregates Squid JSON logs to visualize traffic volume and alert t
 - **Web UI Dashboard**: `http://localhost:6080/report/`
 
 ### 🖥️ noVNC Browser Desktop Environment
-Includes a fully integrated Xfce4 browser-based desktop environment (with Japanese input Fcitx5 support) for visually monitoring or intervening in GUI agent operations (Goose: `:6080`, OpenCode: `:6081`, OpenClaw: `:6082`).
+Includes a fully integrated Xfce4 browser-based desktop environment (with Japanese input Fcitx5 support) for visually monitoring or intervening in GUI agent operations (Goose: `:6080`, OpenCode: `:6081`, OpenClaw: `:6082`). For detailed launch commands and options, refer to the [CLI & Operations Guide](docs/domain/cli_guide.md).
+
+- **Goose Desktop GUI**:
+  ![Goose Desktop GUI](docs/images/goose-desktop.png)
+- **OpenCode Desktop GUI**:
+  ![OpenCode Desktop GUI](docs/images/opencode-desktop.png)
+- **OpenClaw Desktop GUI**:
+  ![OpenClaw Desktop GUI](docs/images/openclaw-desktop.png)
 
 ### 🔄 Multi-Agent Switching Support
 Provides a unified secure foundation where you can freely switch between or run Goose, OpenCode, and OpenClaw concurrently.
