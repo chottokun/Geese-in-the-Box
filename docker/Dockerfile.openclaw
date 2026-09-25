@@ -79,8 +79,9 @@ RUN printf "[Groups/0]\nName=Default\nDefault Layout=jp\nDefaultIM=mozc\n\n[Grou
     && chown -R sandboxuser:sandboxuser /home/sandboxuser/.config /home/sandboxuser/Desktop /home/sandboxuser/.gitconfig
 
 # 5. 実行スクリプトのコピー
+COPY bin/start-openclaw.sh /bin/start-openclaw.sh
 COPY bin/start-openclaw-desktop.sh /bin/start-openclaw-desktop.sh
-RUN chmod +x /bin/start-openclaw-desktop.sh
+RUN chmod +x /bin/start-openclaw.sh /bin/start-openclaw-desktop.sh
 
 USER sandboxuser
 WORKDIR /workspace

@@ -1,4 +1,4 @@
-.PHONY: build rebuild recreate clean-all up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui build-openclaw run-openclaw run-openclaw-gui stop-openclaw stop-openclaw-gui menu
+.PHONY: build rebuild recreate clean-all up-proxy down test test-unit test-smoke session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui build-openclaw run-openclaw run-openclaw-gui stop-openclaw stop-openclaw-gui menu
 
 
 # ==========================================
@@ -95,7 +95,12 @@ control: up-proxy
 
 # コントロールパネルのユニットテスト実行 (uv / pytest)
 test-unit:
-	uv run --with pytest --with pytest-asyncio --with httpx --with fastapi pytest tests/
+	uv run --with pytest --with pytest-asyncio --with httpx --with fastapi --with pyyaml pytest tests/
+
+# スモークテストの実行 (全エージェント起動検証)
+test-smoke: build build-opencode build-openclaw
+	./bin/test-all-agents.sh
+
 
 # コードの静的解析 (uv / ruff)
 lint:
@@ -140,7 +145,7 @@ build-openclaw:
 
 # OpenClaw 対話セッションの起動 (TUI モード)
 run-openclaw: up-proxy
-	$(DOCKER_COMPOSE) --profile openclaw run $(RM_FLAG) openclaw openclaw tui
+	$(DOCKER_COMPOSE) --profile openclaw run $(RM_FLAG) openclaw /bin/start-openclaw.sh
 
 # OpenClaw GUI デスクトップ環境の起動
 run-openclaw-gui: up-proxy

@@ -57,4 +57,19 @@ if [ -n "$SYSTEM_CONTENT" ]; then
     SYSTEM_ARGS=(--system "$SYSTEM_CONTENT")
 fi
 
-exec goose session "${SYSTEM_ARGS[@]}" "$@"
+# 引数の判定: 引数なし、または追加オプションの場合は session を実行
+# 直接 goose コマンドやヘルプ・バージョンが渡された場合は直接 goose を実行
+if [ $# -eq 0 ]; then
+    exec goose session "${SYSTEM_ARGS[@]}"
+elif [ "$1" = "goose" ]; then
+    shift
+    exec goose "$@"
+elif [ "$1" = "--version" ] || [ "$1" = "-V" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ] || [ "$1" = "info" ]; then
+    exec goose "$@"
+elif [ "$1" = "session" ]; then
+    shift
+    exec goose session "${SYSTEM_ARGS[@]}" "$@"
+else
+    exec goose session "${SYSTEM_ARGS[@]}" "$@"
+fi
+
