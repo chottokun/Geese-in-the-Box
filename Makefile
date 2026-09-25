@@ -1,4 +1,4 @@
-.PHONY: build rebuild recreate clean-all up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui build-openclaw run-openclaw run-openclaw-gui stop-openclaw stop-openclaw-gui
+.PHONY: build rebuild recreate clean-all up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui build-openclaw run-openclaw run-openclaw-gui stop-openclaw stop-openclaw-gui menu
 
 
 # ==========================================
@@ -30,6 +30,7 @@ help:
 	@echo " Geese-in-the-Box 使い方"
 	@echo "=========================================================="
 	@echo " [初期設定・基本操作]"
+	@echo "   make menu            : インタラクティブ CLI ランチャーの起動"
 	@echo "   make build           : コンテナイメージのビルド"
 	@echo "   make rebuild         : キャッシュなしでイメージを完全再ビルド"
 	@echo "   make recreate        : コンテナを破棄してイメージから強制再作成・再起動"
@@ -79,6 +80,10 @@ clean-all:
 # プロキシコンテナ・コントロールパネル・Dozzleおよび監視自動集計の起動（バックグラウンド）
 up-proxy:
 	$(DOCKER_COMPOSE) up -d egress-proxy ingress-proxy report-watcher control-panel dozzle
+
+# インタラクティブ CLI ランチャーの起動 (TUI メニュー)
+menu:
+	uv run --with questionary --with rich python bin/launcher.py
 
 # 統合コントロールパネル Web UI (http://localhost:6080/control/)
 control: up-proxy

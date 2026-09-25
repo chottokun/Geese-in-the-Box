@@ -49,7 +49,10 @@ Build the Docker images and start the agent. Choose the command based on your wo
 # Base build (Goose + Proxy infrastructure)
 make build
 
-# Start Goose CLI interactive session
+# 🌟 Launch with interactive CLI launcher (Easiest method)
+make menu
+
+# Start directly in terminal (Goose CLI)
 make session
 ```
 
