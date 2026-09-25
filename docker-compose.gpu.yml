@@ -1,0 +1,31 @@
+# ============================================================
+# Geese-in-the-Box: GPU (NVIDIA) パススルー定義
+# USE_GPU=1 または USE_GPU=true 時に docker-compose.yml にマージされます。
+# ============================================================
+services:
+  goose-agent:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  opencode:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  openclaw:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

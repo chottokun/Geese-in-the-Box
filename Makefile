@@ -1,9 +1,28 @@
-.PHONY: build up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui build-openclaw run-openclaw run-openclaw-gui stop-openclaw stop-openclaw-gui
+.PHONY: build rebuild recreate clean-all up-proxy down test test-unit session serve gui logs reload block-all unblock audit-denied audit-summary export-workspace clean help watch watch-webhook log-rotate audit-ingress report report-json report-watch audit-history control build-opencode run-opencode run-opencode-gui build-openclaw run-openclaw run-openclaw-gui stop-openclaw stop-openclaw-gui
 
 
 # ==========================================
 # Geese-in-the-Box (Docker 隔離 & 通信制御)
 # ==========================================
+
+-include .env
+
+# GPU 利用オプション (USE_GPU=1 または .env の USE_GPU=true で GPU を有効化、デフォルトは CPU のみ)
+USE_GPU ?= 0
+ifeq ($(filter 1 true TRUE,$(USE_GPU)),)
+	COMPOSE_FILES := -f docker-compose.yml
+else
+	COMPOSE_FILES := -f docker-compose.yml -f docker-compose.gpu.yml
+endif
+DOCKER_COMPOSE := docker compose $(COMPOSE_FILES)
+
+# コンテナ終了時の自動破棄フラグ (デフォルト: RM=1 で --rm を付与。RM=0 でコンテナを残して継続可能)
+RM ?= 1
+ifeq ($(filter 0 false FALSE,$(RM)),)
+	RM_FLAG := --rm
+else
+	RM_FLAG :=
+endif
 
 # ヘルプ一覧の表示
 help:
@@ -12,9 +31,16 @@ help:
 	@echo "=========================================================="
 	@echo " [初期設定・基本操作]"
 	@echo "   make build           : コンテナイメージのビルド"
-	@echo "   make down            : 全コンテナの停止"
+	@echo "   make rebuild         : キャッシュなしでイメージを完全再ビルド"
+	@echo "   make recreate        : コンテナを破棄してイメージから強制再作成・再起動"
+	@echo "   make down            : 全コンテナの停止・破棄"
+	@echo "   make clean-all       : 全コンテナ・孤立コンテナ・全ボリュームの完全破棄"
 	@echo "   make test            : 通信遮断テストの実行"
 	@echo "   make control         : 統合コントロールパネルの起動 (http://localhost:6080/control/)"
+	@echo ""
+	@echo " [実行オプション]"
+	@echo "   USE_GPU=1 make <cmd> : NVIDIA GPU パススルーを有効化 (例: USE_GPU=1 make session)"
+	@echo "   RM=0 make <cmd>      : コンテナ終了時に破棄せず保持 (次回変更を継続可能, デフォルト: RM=1 で --rm)"
 	@echo ""
 	@echo " [Goose 操作]"
 	@echo "   make session         : Goose CLI 対話セッションの起動 (ターミナル)"
@@ -35,11 +61,24 @@ help:
 
 # コンテナイメージのビルド
 build:
-	docker compose build
+	$(DOCKER_COMPOSE) build
+
+# キャッシュなし完全再ビルド
+rebuild:
+	$(DOCKER_COMPOSE) build --no-cache
+
+# コンテナの破棄と強制再作成・再起動
+recreate: down
+	$(DOCKER_COMPOSE) up -d --force-recreate
+
+# コンテナ・孤立コンテナ・全ボリュームの完全破棄（初期化）
+clean-all:
+	$(DOCKER_COMPOSE) down -v --remove-orphans
+	@echo "全コンテナとボリュームを完全に破棄・初期化しました。"
 
 # プロキシコンテナ・コントロールパネル・Dozzleおよび監視自動集計の起動（バックグラウンド）
 up-proxy:
-	docker compose up -d egress-proxy ingress-proxy report-watcher control-panel dozzle
+	$(DOCKER_COMPOSE) up -d egress-proxy ingress-proxy report-watcher control-panel dozzle
 
 # 統合コントロールパネル Web UI (http://localhost:6080/control/)
 control: up-proxy
@@ -59,26 +98,26 @@ lint:
 
 # 全コンテナの停止
 down:
-	docker compose down
+	$(DOCKER_COMPOSE) down
 
 # 通信遮断テストの実行 (L3/L4 内部隔離 & L7 Squid 制御)
 test: up-proxy
-	docker compose run --rm goose-agent /bin/test-egress.sh
+	$(DOCKER_COMPOSE) run $(RM_FLAG) goose-agent /bin/test-egress.sh
 	@echo "=== [監査ログ構造検証 (ホスト側)] ==="
 	@docker compose exec -T egress-proxy cat /var/log/squid/access.json 2>/dev/null | tail -n 20 | grep -q "user_agent" && echo "  -> OK: 監査ログの JSON 構造 (user_agent 等) が正常に記録されています" || (echo "  -> FAIL: 監査ログに user_agent フィールドが見つかりません" && exit 1)
 
 
 # Goose CLI 対話セッションの起動 (AGENTS.md / ルール自動読み込み)
 session: up-proxy
-	docker compose run --rm goose-agent /bin/start-goose.sh
+	$(DOCKER_COMPOSE) run $(RM_FLAG) goose-agent /bin/start-goose.sh
 
 # OpenCode コンテナのビルド
 build-opencode:
-	docker compose --profile opencode build opencode
+	$(DOCKER_COMPOSE) --profile opencode build opencode
 
 # OpenCode 対話セッションの起動 (TUI モード)
 run-opencode: up-proxy
-	docker compose --profile opencode run --rm opencode opencode
+	$(DOCKER_COMPOSE) --profile opencode run $(RM_FLAG) opencode opencode
 
 # OpenCode GUI デスクトップ環境の起動 (Xfce4 + noVNC: http://localhost:6081/vnc.html)
 run-opencode-gui: up-proxy
@@ -88,15 +127,15 @@ run-opencode-gui: up-proxy
 	@echo " 起動後、ブラウザで以下を開いてください:"
 	@echo " 👉 http://localhost:6081/vnc.html"
 	@echo "=========================================================="
-	docker compose --profile opencode run --rm --name opencode-agent opencode /bin/start-opencode-desktop.sh
+	$(DOCKER_COMPOSE) --profile opencode run $(RM_FLAG) --name opencode-agent opencode /bin/start-opencode-desktop.sh
 
 # OpenClaw コンテナのビルド
 build-openclaw:
-	docker compose --profile openclaw build openclaw
+	$(DOCKER_COMPOSE) --profile openclaw build openclaw
 
 # OpenClaw 対話セッションの起動 (TUI モード)
 run-openclaw: up-proxy
-	docker compose --profile openclaw run --rm openclaw openclaw tui
+	$(DOCKER_COMPOSE) --profile openclaw run $(RM_FLAG) openclaw openclaw tui
 
 # OpenClaw GUI デスクトップ環境の起動
 run-openclaw-gui: up-proxy
@@ -106,17 +145,17 @@ run-openclaw-gui: up-proxy
 	@echo " 👉 noVNC 起動 (ポート 6082)"
 	@echo " 👉 OpenClaw UI 起動 (ポート 18789)"
 	@echo "=========================================================="
-	docker compose --profile openclaw run --rm --name openclaw-agent openclaw /bin/start-openclaw-desktop.sh
+	$(DOCKER_COMPOSE) --profile openclaw run $(RM_FLAG) --name openclaw-agent openclaw /bin/start-openclaw-desktop.sh
 
 # OpenClaw コンテナの停止
 stop-openclaw stop-openclaw-gui:
-	docker compose --profile openclaw stop openclaw
+	$(DOCKER_COMPOSE) --profile openclaw stop openclaw
 	@docker rm -f openclaw-agent 2>/dev/null || true
 
 
 # Goose Desktop 向け ACP サーバー起動 (ポート 3284)
 serve: up-proxy
-	docker compose run --rm -p 127.0.0.1:3284:3284 goose-agent goose serve --host 0.0.0.0 --port 3284
+	$(DOCKER_COMPOSE) run $(RM_FLAG) -p 127.0.0.1:3284:3284 goose-agent goose serve --host 0.0.0.0 --port 3284
 
 # GUI デスクトップ環境の起動 (Xfce4 + noVNC: http://localhost:6080/vnc.html)
 gui:
@@ -125,7 +164,7 @@ gui:
 	@echo " 起動後、ブラウザで以下を開いてください:"
 	@echo " 👉 http://localhost:6080/vnc.html"
 	@echo "=========================================================="
-	docker compose up -d
+	$(DOCKER_COMPOSE) up -d
 
 # ==========================================
 # 監査ログ・モニタリング
