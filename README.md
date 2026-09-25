@@ -102,7 +102,14 @@ Squid の JSON ログを自動集計し、トラフィック量やアラート�
 - **Web UI ダッシュボード**: `http://localhost:6080/report/`
 
 ### 🖥️ noVNC ブラウザデスクトップ環境
-GUI エージェントの動作を視覚的に確認・介入できるブラウザ完結型の Xfce4 デスクトップ環境を内蔵しています（Goose: `:6080`、OpenCode: `:6081`、OpenClaw: `:6082`）。日本語入力 (Fcitx5) にも対応。
+GUI エージェントの動作を視覚的に確認・介入できるブラウザ完結型の Xfce4 デスクトップ環境を内蔵しています（Goose: `:6080`、OpenCode: `:6081`、OpenClaw: `:6082`）。日本語入力 (Fcitx5) にも対応。詳細な起動コマンドやオプションについては、[CLI 使い方・運用ガイド](docs/domain/cli_guide.md) を参照してください。
+
+- **Goose Desktop GUI**:
+  ![Goose Desktop GUI](docs/images/goose-desktop.png)
+- **OpenCode Desktop GUI**:
+  ![OpenCode Desktop GUI](docs/images/opencode-desktop.png)
+- **OpenClaw Desktop GUI**:
+  ![OpenClaw Desktop GUI](docs/images/openclaw-desktop.png)
 
 ### 🔄 複数エージェント切り替え対応
 一つの安全な基盤の上で、Goose、OpenCode、OpenClaw を並行運用したりすることが可能です。

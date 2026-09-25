@@ -23,6 +23,19 @@ Geese-in-the-Box は、Block チームが開発する **Goose Agent** 、オー�
 | **インターフェース** | TUI (Terminal UI), Desktop GUI, ACP Server (外部アプリ接続) | TUI, Web GUI (独自ダッシュボード) | TUI, Control UI (ポート 18789) |
 | **ホスト連携** | `make session` による直接対話, `make gui` (noVNC: 6080) | `make run-opencode` (TUI), `make run-opencode-gui` (noVNC: 6081) | `make run-openclaw` (TUI), `make run-openclaw-gui` (noVNC: 6082) |
 
+### デスクトップ環境の特徴 (GUI スクリーンショット)
+
+エージェントごとに独立した仮想デスクトップ (noVNC ベース) を提供しており、すべて日本語入力 (Fcitx5) に対応しています。
+
+**Goose Desktop GUI** (ポート 6080: `make gui`)
+![Goose Desktop GUI](../images/goose-desktop.png)
+
+**OpenCode Desktop GUI** (ポート 6081: `make run-opencode-gui`)
+![OpenCode Desktop GUI](../images/opencode-desktop.png)
+
+**OpenClaw Desktop GUI** (ポート 6082: `make run-openclaw-gui`)
+![OpenClaw Desktop GUI](../images/openclaw-desktop.png)
+
 ## 並行運用設計 (Parallel Operation)
 
 1 つのプロジェクト（ワークスペース）に対して、目的の異なる複数の AI エージェントを同時に、または切り替えて使用できるよう設計されています。

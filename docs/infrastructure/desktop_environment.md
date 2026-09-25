@@ -52,6 +52,19 @@ AI エージェントにブラウザを操作させたり、GUI ツールを使�
 6. **websockify (noVNC) の起動**:
    VNC ポート (5900) を WebSocket ポート (6080/6081) に変換し、Web クライアント（Nginx Ingress 経由）に提供します。
 
+## 仮想デスクトップ画面 (GUI スクリーンショット)
+
+各エージェントのコンテナ内で稼働する仮想デスクトップの様子です。
+
+**Goose Desktop GUI** (`make gui` -> http://localhost:6080/vnc.html)
+![Goose Desktop GUI](../images/goose-desktop.png)
+
+**OpenCode Desktop GUI** (`make run-opencode-gui` -> http://localhost:6081/vnc.html)
+![OpenCode Desktop GUI](../images/opencode-desktop.png)
+
+**OpenClaw Desktop GUI** (`make run-openclaw-gui` -> http://localhost:6082/vnc.html)
+![OpenClaw Desktop GUI](../images/openclaw-desktop.png)
+
 ## Goose Agent GUI の実行
 
 Goose Agent の公式 GUI (Electron アプリ) は、Linux 上で実行する際に Sandbox 関連のエラーが発生しやすいため、ラッパースクリプトを介して `--no-sandbox` などのオプションを付与して起動されます。
