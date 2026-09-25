@@ -50,7 +50,10 @@ Docker イメージをビルドし、エージェントを起動します。用�
 # 基本ビルド (Goose + プロキシ基盤)
 make build
 
-# Goose CLI 対話セッション
+# 🌟 インタラクティブ CLI ランチャーで起動する (最も簡単)
+make menu
+
+# ターミナルで直接対話したい場合 (Goose CLI)
 make session
 ```
 
