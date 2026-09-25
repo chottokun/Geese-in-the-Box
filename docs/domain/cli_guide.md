@@ -41,6 +41,15 @@ tags: ["cli", "guide", "launcher", "options", "commands"]
 | | GUI (noVNC) | `make run-openclaw-gui` | [http://localhost:6082/vnc.html](http://localhost:6082/vnc.html) |
 
 ※GUI を起動した場合は、対象のアクセス先 URL をブラウザで開いて操作してください。
+※OpenClaw CLI (`make run-openclaw`) では、初回起動時にランダムなゲートウェイトークンが自動生成され、`~/.openclaw/openclaw.json` へモデル設定が同期されます。`bin/start-openclaw.sh` を経由してローカルモード (`openclaw tui --local`) で起動されます。
+
+### スモークテストの実行
+
+すべてのエージェント（Goose, OpenCode, OpenClaw）が CLI/GUI 環境で正常に起動するかを一括検証するためのスモークテストが用意されています。CI 環境や実機での動作確認にご活用ください。
+
+```bash
+make test-smoke
+```
 
 ## 3. 起動オプションの詳細と活用例
 
