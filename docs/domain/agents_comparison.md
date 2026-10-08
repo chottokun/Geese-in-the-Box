@@ -9,19 +9,19 @@ status: "stable"
 tags: ["goose", "opencode", "openclaw", "agent", "comparison", "parallel"]
 ---
 
-# Goose, OpenCode, OpenClaw の比較・並行運用
+# Goose, OpenCode, OpenClaw, DeepSeek Harness, Hermes の比較・並行運用
 
-Geese-in-the-Box は、Block チームが開発する **Goose Agent** 、オープンソースのコーディングエージェント **OpenCode**、そして最新のエージェント **OpenClaw** を、同じ安全なサンドボックス境界内でサポートします。
+Geese-in-the-Box は、Block チームが開発する **Goose Agent**、オープンソースのコーディングエージェント **OpenCode**、最新エージェント **OpenClaw** に加え、プラグイン型エージェントハーネス **DeepSeek Harness (dsh)** および自己改善型エージェント **Hermes Agent** を、同じ安全なサンドボックス境界内でサポートします。
 
 ## エージェントの比較
 
-| 特徴 | Goose Agent | OpenCode | OpenClaw |
-|:---|:---|:---|:---|
-| **コア設計** | 汎用 AI エージェント（システム操作、ブラウザ操作、コーディング） | コーディングとソフトウェア開発に特化したエージェント | 高度な推論とメッセージング連携（Telegram/Discord）を備えたエージェント |
-| **アーキテクチャ** | Rust CLI + Electron GUI | Python バックエンド + Vue/React フロントエンド | Python バックエンド + Control UI |
-| **拡張性** | MCP (Model Context Protocol) サーバーによる動的拡張を公式サポート | 独自プラグイン/ツール群 | 組み込みツールとメッセージング連携拡張 |
-| **インターフェース** | TUI (Terminal UI), Desktop GUI, ACP Server (外部アプリ接続) | TUI, Web GUI (独自ダッシュボード) | TUI, Control UI (ポート 18789) |
-| **ホスト連携** | `make session` による直接対話, `make gui` (noVNC: 6080) | `make run-opencode` (TUI), `make run-opencode-gui` (noVNC: 6081) | `make run-openclaw` (TUI), `make run-openclaw-gui` (noVNC: 6082) |
+| 特徴 | Goose Agent | OpenCode | OpenClaw | DeepSeek Harness (`dsh`) | Hermes Agent |
+|:---|:---|:---|:---|:---|:---|
+| **コア設計** | 汎用 AI エージェント（システム操作、ブラウザ操作、コーディング） | コーディングとソフトウェア開発に特化したエージェント | 高度な推論とメッセージング連携を備えたエージェント | 「Everything is a Plugin」設計のオープンソースエージェントハーネス | Nous Research 製の自己改善・スキル学習ループ内包型エージェント |
+| **アーキテクチャ** | Rust CLI + Electron GUI | Python バックエンド + Vue/React フロントエンド | Python バックエンド + Control UI | TypeScript/Node.js モノレポ (Cordis フレームワーク) | Python (uv) + Node.js (CLI/TUI) |
+| **拡張性** | MCP サーバーによる動的拡張 | 独自プラグイン/ツール群 | 組み込みツールとメッセージング連携拡張 | Cordis プラグインエコシステム、MCP | Agent Skills 互換、自律スキル作成・学習 |
+| **インターフェース** | TUI, Desktop GUI, ACP Server | TUI, Web GUI | TUI, Control UI (ポート 18789) | Web UI, Desktop GUI, CLI | Terminal TUI (`hermes`) |
+| **ホスト連携** | `make session`, `make gui` (:6080) | `make run-opencode` (:6081) | `make run-openclaw` (:6082) | `make run-dsh`, `make run-dsh-gui` (:6083) | `make run-hermes`, `make run-hermes-gui` (:6084) |
 
 ### デスクトップ環境の特徴 (GUI スクリーンショット)
 
@@ -41,12 +41,14 @@ Geese-in-the-Box は、Block チームが開発する **Goose Agent** 、オー�
 1 つのプロジェクト（ワークスペース）に対して、目的の異なる複数の AI エージェントを同時に、または切り替えて使用できるよう設計されています。
 
 ### コンテナの分離とポートの重複回避
-- Goose は `goose-agent` コンテナ、OpenCode は `opencode-agent` コンテナ、OpenClaw は `openclaw-agent` コンテナとしてそれぞれ独立して稼働します。
-- `opencode-agent` および `openclaw-agent` は Docker Compose の profiles機能 (`opencode`, `openclaw`) によって定義されており、明示的にビルド・起動（`make build-opencode`, `make run-openclaw`等）しない限りリソースを消費しません。
-- これらは noVNC による仮想デスクトップを提供しますが、ポート競合を防ぐため Nginx で以下のようにルーティングを分けています：
+- 各エージェントは独立したコンテナとして稼働します (`goose-agent`, `opencode-agent`, `openclaw-agent`, `dsh-agent`, `hermes-agent`)。
+- オプショナルエージェント (`opencode`, `openclaw`, `dsh`, `hermes`) は Docker Compose の profiles 機能によって定義されており、明示的にビルド・起動しない限りホストのリソースを消費しません。
+- ポート競合を防ぐため [config/ports.env](file:///home/nobuhiko/Project/goose-in-the-box/config/ports.env) で体系的に定義されたポートマップに従い、Nginx でルーティングされます：
   - Goose: `:6080`
   - OpenCode: `:6081`
   - OpenClaw: `:6082`
+  - DeepSeek Harness (`dsh`): `:6083`
+  - Hermes Agent: `:6084`
 
 ### ネットワーク監査の統一
 どのコンテナから発生したトラフィックであっても、Docker の `internal-net` に属しているため、通信は必ず同じ `egress-proxy` (Squid) を通過します。

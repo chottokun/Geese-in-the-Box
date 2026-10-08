@@ -34,6 +34,22 @@ def test_build_command_openclaw_gui():
     env, cmd = launcher.build_command("run_openclaw_gui")
     assert cmd == ["make", "run-openclaw-gui"]
 
+def test_build_command_dsh_gui():
+    env, cmd = launcher.build_command("run_dsh_gui")
+    assert cmd == ["make", "run-dsh-gui"]
+
+def test_build_command_dsh_cli():
+    env, cmd = launcher.build_command("run_dsh_cli")
+    assert cmd == ["make", "run-dsh"]
+
+def test_build_command_hermes_gui():
+    env, cmd = launcher.build_command("run_hermes_gui")
+    assert cmd == ["make", "run-hermes-gui"]
+
+def test_build_command_hermes_cli():
+    env, cmd = launcher.build_command("run_hermes_cli")
+    assert cmd == ["make", "run-hermes"]
+
 def test_build_command_with_gpu():
     env, cmd = launcher.build_command("run_goose_cli", use_gpu=True)
     assert env.get("USE_GPU") == "1"

@@ -80,11 +80,17 @@ test_cli_cmd "OpenClaw CLI (start-openclaw.sh)" "docker compose --profile opencl
 # 6. OpenClaw GUI
 test_gui_cmd "OpenClaw GUI (start-openclaw-desktop.sh)" "smoke-openclaw-gui" "--profile openclaw" "openclaw /bin/start-openclaw-desktop.sh"
 
+# 7. dsh GUI
+test_gui_cmd "dsh GUI (start-dsh-desktop.sh)" "smoke-dsh-gui" "--profile dsh" "dsh /bin/start-dsh-desktop.sh"
+
+# 8. Hermes GUI
+test_gui_cmd "Hermes GUI (start-hermes-desktop.sh)" "smoke-hermes-gui" "--profile hermes" "hermes /bin/start-hermes-desktop.sh"
+
 echo "=========================================="
 if [ $ERRORS -gt 0 ]; then
     echo "=== スモークテスト失敗: $ERRORS 件のエラー ==="
     exit 1
 else
-    echo "=== スモークテスト完了: 全6組み合わせが正常にパスしました ==="
+    echo "=== スモークテスト完了: 全組み合わせが正常にパスしました ==="
     exit 0
 fi

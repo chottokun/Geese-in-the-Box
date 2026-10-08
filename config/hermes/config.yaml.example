@@ -1,0 +1,12 @@
+llm:
+  provider: openai
+  base_url: ${OPENAI_BASE_URL:-http://host.docker.internal:11434/v1}
+  api_key: ${OPENAI_API_KEY:-sk-dummy}
+  model: ${GOOSE_MODEL:-gpt-4o}
+
+terminal:
+  backend: local
+
+proxy:
+  http: http://egress-proxy:3128
+  https: http://egress-proxy:3128

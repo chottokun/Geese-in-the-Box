@@ -36,6 +36,8 @@ services:
       - "${HOST_BIND:-127.0.0.1}:${NOVNC_PORT:-6080}:6080" # noVNC (ブラウザ接続用Web UI & WebSocket)
       - "${HOST_BIND:-127.0.0.1}:${OPENCODE_NOVNC_PORT:-6081}:6081" # OpenCode noVNC
       - "${HOST_BIND:-127.0.0.1}:${OPENCLAW_NOVNC_PORT:-6082}:6082" # OpenClaw noVNC
+      - "${HOST_BIND:-127.0.0.1}:${DSH_NOVNC_PORT:-6083}:6083" # DSH noVNC
+      - "${HOST_BIND:-127.0.0.1}:${HERMES_NOVNC_PORT:-6084}:6084" # Hermes noVNC
       - "${HOST_BIND:-127.0.0.1}:${OPENCLAW_GATEWAY_PORT:-18789}:18789" # OpenClaw Control UI
       - "${HOST_BIND:-127.0.0.1}:${GOOSE_SERVE_PORT:-3284}:3284" # Goose ACP サーバー用
     volumes:
@@ -101,6 +103,7 @@ services:
       - ./bin/start-desktop.sh:/bin/start-desktop.sh:ro
       - ./bin/start-goose.sh:/bin/start-goose.sh:ro
       - ./bin/test-egress.sh:/bin/test-egress.sh:ro
+      - ./bin/lib/desktop-common.sh:/bin/lib/desktop-common.sh:ro
       - ./config:/home/sandboxuser/.config/goose:rw
       - ./data/sessions:/home/sandboxuser/.local/share/goose/sessions:rw
       - ./data/logs:/home/sandboxuser/.local/state/goose/logs:rw
@@ -215,6 +218,7 @@ services:
       - ./workspace:/workspace:rw
       - ./config/opencode:/home/sandboxuser/.config/opencode:rw
       - ./bin/start-opencode-desktop.sh:/bin/start-opencode-desktop.sh:ro
+      - ./bin/lib/desktop-common.sh:/bin/lib/desktop-common.sh:ro
     working_dir: /workspace
     networks:
       - internal-net
@@ -276,6 +280,103 @@ services:
       - ./config/openclaw:/home/sandboxuser/.openclaw:rw
       - ./bin/start-openclaw.sh:/bin/start-openclaw.sh:ro
       - ./bin/start-openclaw-desktop.sh:/bin/start-openclaw-desktop.sh:ro
+      - ./bin/lib/desktop-common.sh:/bin/lib/desktop-common.sh:ro
+    working_dir: /workspace
+    networks:
+      - internal-net
+    depends_on:
+      egress-proxy:
+        condition: service_healthy
+
+  # ------------------------------------------------------------
+  # DeepSeek Harness (dsh) Agent Container (隔離作業環境, オプショナル)
+  # ------------------------------------------------------------
+  dsh:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dsh
+      args:
+        DSH_VERSION: ${DSH_VERSION:-dsh-v0.2.1-alpha.1}
+    image: dsh-agent:latest
+    container_name: dsh-agent
+    profiles: ["dsh"]
+    stdin_open: true
+    tty: true
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      - HTTP_PROXY=http://egress-proxy:3128
+      - HTTPS_PROXY=http://egress-proxy:3128
+      - http_proxy=http://egress-proxy:3128
+      - https_proxy=http://egress-proxy:3128
+      - NO_PROXY=localhost,127.0.0.1,egress-proxy
+      - DISPLAY=:1
+      - RESOLUTION=${RESOLUTION:-1280x800x24}
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - GTK_IM_MODULE=fcitx
+      - QT_IM_MODULE=fcitx
+      - XMODIFIERS=@im=fcitx
+      - TZ=${TZ:-Asia/Tokyo}
+      # --- LLM プロバイダー ---
+      - OLLAMA_HOST=${OLLAMA_HOST:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - GOOSE_MODEL=${GOOSE_MODEL:-}
+    shm_size: '${SHM_SIZE:-1gb}'
+    command: /bin/bash
+    volumes:
+      - ./workspace:/workspace:rw
+      - ./config/dsh/profiles:/opt/dsh/profiles:rw
+      - ./bin/start-dsh-desktop.sh:/bin/start-dsh-desktop.sh:ro
+      - ./bin/lib/desktop-common.sh:/bin/lib/desktop-common.sh:ro
+    working_dir: /workspace
+    networks:
+      - internal-net
+    depends_on:
+      egress-proxy:
+        condition: service_healthy
+
+  # ------------------------------------------------------------
+  # Hermes Agent Container (隔離作業環境, オプショナル)
+  # ------------------------------------------------------------
+  hermes:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.hermes
+      args:
+        HERMES_VERSION: ${HERMES_VERSION:-v2026.9.24}
+    image: hermes-agent:latest
+    container_name: hermes-agent
+    profiles: ["hermes"]
+    stdin_open: true
+    tty: true
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      - HTTP_PROXY=http://egress-proxy:3128
+      - HTTPS_PROXY=http://egress-proxy:3128
+      - http_proxy=http://egress-proxy:3128
+      - https_proxy=http://egress-proxy:3128
+      - NO_PROXY=localhost,127.0.0.1,egress-proxy
+      - DISPLAY=:1
+      - RESOLUTION=${RESOLUTION:-1280x800x24}
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - GTK_IM_MODULE=fcitx
+      - QT_IM_MODULE=fcitx
+      - XMODIFIERS=@im=fcitx
+      - TZ=${TZ:-Asia/Tokyo}
+      # --- LLM プロバイダー ---
+      - OLLAMA_HOST=${OLLAMA_HOST:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - GOOSE_MODEL=${GOOSE_MODEL:-}
+    shm_size: '${SHM_SIZE:-1gb}'
+    command: /bin/bash
+    volumes:
+      - ./workspace:/workspace:rw
+      - ./config/hermes:/home/sandboxuser/.config/hermes:rw
+      - ./bin/start-hermes-desktop.sh:/bin/start-hermes-desktop.sh:ro
+      - ./bin/lib/desktop-common.sh:/bin/lib/desktop-common.sh:ro
     working_dir: /workspace
     networks:
       - internal-net

@@ -35,7 +35,13 @@ graph LR
 | **6080** | Goose Desktop noVNC | `goose-agent:6080` | Webブラウザでの画面操作・WebSocket対応 |
 | **3284** | Goose ACP Server | `goose-agent:3284` | 公式デスクトップアプリ連携用 |
 | **6081** | OpenCode noVNC | `opencode-agent:6081` | OpenCode エージェントのデスクトップUI |
+| **6082** | OpenClaw noVNC | `openclaw-agent:6082` | OpenClaw エージェントのデスクトップUI |
+| **6083** | DeepSeek Harness noVNC | `dsh-agent:6083` | dsh (Web UI / Desktop / CLI) デスクトップUI |
+| **6084** | Hermes noVNC | `hermes-agent:6084` | Hermes エージェントのターミナルTUI |
+| **18789** | OpenClaw Gateway | `openclaw-agent:18789` | OpenClaw 固有の Web UI / Gateway |
 | (6080/control) | Control Panel | `control-panel:8000` | 管理用UI・APIへの内部ルーティング |
+
+ポート設定の詳細および一元管理ルールについては [ポートマップ仕様書](port_mappings.md) を参照してください。
 
 ## WebSocket (noVNC) サポート
 
