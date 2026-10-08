@@ -14,6 +14,8 @@ workspace/*
 config/*
 !config/.gitkeep
 !config/llm-pricing.json
+!config/ports.env
+!config/**/*.example
 
 # 永続化データ・エクスポート
 data/*

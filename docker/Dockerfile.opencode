@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN npm install -g @opencode/cli
 
 # 3. OpenCode Desktop (.deb) のインストール + --no-sandbox ラッパーの設置
-ARG OPENCODE_VERSION=1.18.31
+ARG OPENCODE_VERSION=1.18.35
 RUN curl -fsSL "https://github.com/anomalyco/opencode/releases/download/v${OPENCODE_VERSION}/opencode-desktop-linux-amd64.deb" -o /tmp/opencode.deb \
     && apt-get update \
     && apt-get install -y --no-install-recommends /tmp/opencode.deb \
