@@ -344,7 +344,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.hermes
       args:
-        HERMES_VERSION: ${HERMES_VERSION:-v2026.9.24}
+        HERMES_VERSION: ${HERMES_VERSION:-main}
     image: hermes-agent:latest
     container_name: hermes-agent
     profiles: ["hermes"]

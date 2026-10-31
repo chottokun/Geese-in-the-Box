@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # 日本語フォント
     fonts-noto-cjk \
     fonts-noto-color-emoji \
+    libatomic1 \
     # 日本語入力システム (Fcitx5 + Mozc)
     fcitx5 \
     fcitx5-mozc \
@@ -46,8 +47,12 @@ RUN groupadd -g ${GID} sandboxuser \
     && chown -R sandboxuser:sandboxuser /home/sandboxuser /workspace
 
 # 3. Hermes のインストール
-ARG HERMES_VERSION=v2026.9.24
-RUN su - sandboxuser -c "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --branch ${HERMES_VERSION} --skip-setup"
+ARG HERMES_VERSION=main
+RUN if [ "${HERMES_VERSION}" = "main" ]; then \
+        su - sandboxuser -c "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --channel main --skip-setup"; \
+    else \
+        su - sandboxuser -c "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --branch ${HERMES_VERSION} --skip-setup"; \
+    fi
 
 # 4. デスクトップ設定
 RUN printf "[Groups/0]\nName=Default\nDefault Layout=jp\nDefaultIM=mozc\n\n[Groups/0/Items/0]\nName=keyboard-jp\nLayout=\n\n[Groups/0/Items/1]\nName=mozc\nLayout=\n\n[GroupOrder]\n0=Default\n" > /home/sandboxuser/.config/fcitx5/profile \
