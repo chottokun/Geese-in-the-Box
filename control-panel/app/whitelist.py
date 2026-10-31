@@ -4,6 +4,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app import storage
 from app.audit import log_control_operation
 from app.auth import get_current_user
 from app.squid_service import reconfigure_squid
@@ -15,74 +16,46 @@ from app.temp_whitelist import (
 
 DOMAIN_REGEX = re.compile(r"^[a-zA-Z0-9\.\_\-\:\*]+$")
 
-def validate_domain_format(domain: str):
+
+def validate_domain_format(domain: str) -> None:
     if not domain or not DOMAIN_REGEX.match(domain) or "\n" in domain or "\r" in domain:
         raise HTTPException(
             status_code=400,
             detail="invalid_domain_format"
         )
 
+
 router = APIRouter(prefix="/api/whitelist", tags=["whitelist"])
 
 DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 WHITELIST_FILE = os.path.join(DATA_DIR, "whitelist.txt")
 
+
 class DomainItem(BaseModel):
     domain: str
     enabled: bool = True
 
+
 class AddDomainRequest(BaseModel):
     domain: str
 
+
 class AddTempDomainRequest(BaseModel):
     domain: str
-    duration_minutes: int = Field(15, ge=1, le=1440) # 1分〜24時間
+    duration_minutes: int = Field(15, ge=1, le=1440)  # 1分〜24時間
+
 
 class ToggleDomainRequest(BaseModel):
     enabled: bool
 
+
 def parse_whitelist_file() -> tuple[list[dict], list[str]]:
-    items = []
-    header_lines = []
-    if not os.path.exists(WHITELIST_FILE):
-        return items, header_lines
+    return storage.parse_whitelist_file(WHITELIST_FILE)
 
-    try:
-        with open(WHITELIST_FILE, "r", encoding="utf-8") as f:
-            lines = f.readlines()
 
-        for line in lines:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if stripped.startswith("# ALL BLOCKED"):
-                continue
+def write_whitelist_items(items: list[dict], header_lines: list[str] | None = None) -> None:
+    storage.write_whitelist_items(items, header_lines, WHITELIST_FILE)
 
-            # Check if commented domain e.g. # .googleapis.com or # github.com
-            if stripped.startswith("#"):
-                comment_content = stripped[1:].strip()
-                if "." in comment_content and not comment_content.startswith("="):
-                    items.append({"domain": comment_content, "enabled": False})
-                else:
-                    header_lines.append(line if line.endswith("\n") else line + "\n")
-            else:
-                items.append({"domain": stripped, "enabled": True})
-    except Exception as e:
-        print(f"Error parsing whitelist file: {e}")
-
-    return items, header_lines
-
-def write_whitelist_items(items: list[dict], header_lines: list[str] | None = None):
-    lines = list(header_lines) if header_lines else []
-    for item in items:
-        dom = item["domain"].strip()
-        if item["enabled"]:
-            lines.append(f"{dom}\n")
-        else:
-            lines.append(f"# {dom}\n")
-
-    with open(WHITELIST_FILE, "w", encoding="utf-8") as f:
-        f.writelines(lines)
 
 @router.get("", dependencies=[Depends(get_current_user)])
 def get_whitelist():
@@ -104,6 +77,7 @@ def get_whitelist():
             item["duration_minutes"] = None
 
     return {"domains": items, "count": len(items)}
+
 
 @router.post("", dependencies=[Depends(get_current_user)])
 def add_domain(body: AddDomainRequest, request: Request):
@@ -136,6 +110,7 @@ def add_domain(body: AddDomainRequest, request: Request):
         "squid_reloaded": reconfig_ok
     }
 
+
 @router.post("/temporary", dependencies=[Depends(get_current_user)])
 def add_temporary_domain(body: AddTempDomainRequest, request: Request):
     client_ip = request.client.host if request.client else "unknown"
@@ -147,7 +122,6 @@ def add_temporary_domain(body: AddTempDomainRequest, request: Request):
     existing_item = next((item for item in items if item["domain"].lower() == domain.lower()), None)
 
     if existing_item:
-        # すでに無効状態で存在している場合は有効化
         if not existing_item["enabled"]:
             existing_item["enabled"] = True
             write_whitelist_items(items, headers)
@@ -174,6 +148,7 @@ def add_temporary_domain(body: AddTempDomainRequest, request: Request):
         "squid_reloaded": reconfig_ok,
         "temporary_info": temp_record
     }
+
 
 @router.delete("/{domain:path}", dependencies=[Depends(get_current_user)])
 def delete_domain(domain: str, request: Request):
@@ -204,6 +179,7 @@ def delete_domain(domain: str, request: Request):
         "message_en": f"Domain '{domain}' deleted.",
         "squid_reloaded": reconfig_ok
     }
+
 
 @router.patch("/{domain:path}", dependencies=[Depends(get_current_user)])
 def toggle_domain(domain: str, body: ToggleDomainRequest, request: Request):
@@ -244,6 +220,7 @@ def toggle_domain(domain: str, body: ToggleDomainRequest, request: Request):
         "message_en": msg_en,
         "squid_reloaded": reconfig_ok
     }
+
 
 @router.post("/reload", dependencies=[Depends(get_current_user)])
 def reload_squid_config(request: Request):

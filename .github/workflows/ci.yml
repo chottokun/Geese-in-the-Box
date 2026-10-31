@@ -10,9 +10,12 @@ on:
       - 'config/**'
       - 'bin/**'
       - 'control-panel/**'
+      - 'docker/**'
       - 'tests/**'
       - 'Makefile'
-      - 'docker-compose.yml'
+      - 'docker-compose*.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
       - '.github/workflows/**'
   pull_request:
     branches: [ main ]
@@ -23,9 +26,12 @@ on:
       - 'config/**'
       - 'bin/**'
       - 'control-panel/**'
+      - 'docker/**'
       - 'tests/**'
       - 'Makefile'
-      - 'docker-compose.yml'
+      - 'docker-compose*.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
       - '.github/workflows/**'
   workflow_dispatch:
 

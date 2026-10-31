@@ -17,12 +17,23 @@ IS_AUTH_ENABLED = bool(CONTROL_PANEL_PASSWORD) and not DISABLE_AUTH_ENV
 SESSION_TOKENS: dict[str, float] = {}
 SESSION_DURATION_SECONDS = 86400  # 24 hours
 
+
 class LoginRequest(BaseModel):
     password: str
+
 
 class AuthStatusResponse(BaseModel):
     auth_enabled: bool
     authenticated: bool
+
+
+def extract_token_from_request(request: Request, cp_session: str | None = None) -> str | None:
+    """リクエストの Authorization ヘッダーまたは Cookie からセッショントークンを抽出する"""
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header.split(" ", 1)[1]
+    return cp_session
+
 
 def purge_expired_tokens() -> int:
     """期限切れのセッショントークンを一括削除する"""
@@ -31,6 +42,7 @@ def purge_expired_tokens() -> int:
     for t in expired:
         SESSION_TOKENS.pop(t, None)
     return len(expired)
+
 
 def is_valid_token(token: str | None) -> bool:
     if not IS_AUTH_ENABLED:
@@ -47,44 +59,39 @@ def is_valid_token(token: str | None) -> bool:
         return False
     return True
 
+
 def get_current_user(
     request: Request,
     cp_session: str | None = Cookie(None)
-):
+) -> bool:
     if not IS_AUTH_ENABLED:
         return True
 
-    # Check Bearer token in Header
-    auth_header = request.headers.get("Authorization")
-    token = None
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ", 1)[1]
-    elif cp_session:
-        token = cp_session
-
+    token = extract_token_from_request(request, cp_session)
     if not is_valid_token(token):
         raise HTTPException(status_code=401, detail="auth_required")
     return True
 
+
 @router.get("/status", response_model=AuthStatusResponse)
 def check_auth_status(request: Request, cp_session: str | None = Cookie(None)):
-    auth_header = request.headers.get("Authorization")
-    token = None
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ", 1)[1]
-    elif cp_session:
-        token = cp_session
-
+    token = extract_token_from_request(request, cp_session)
     authenticated = is_valid_token(token)
     return AuthStatusResponse(
         auth_enabled=IS_AUTH_ENABLED,
         authenticated=authenticated
     )
 
+
 @router.post("/login")
 def login(body: LoginRequest, response: Response):
     if not IS_AUTH_ENABLED:
-        return {"status": "ok", "message": "auth_disabled", "message_ja": "認証は無効化されています。", "message_en": "Authentication is disabled."}
+        return {
+            "status": "ok",
+            "message": "auth_disabled",
+            "message_ja": "認証は無効化されています。",
+            "message_en": "Authentication is disabled."
+        }
 
     if body.password != CONTROL_PANEL_PASSWORD:
         raise HTTPException(status_code=401, detail="invalid_password")
@@ -101,19 +108,26 @@ def login(body: LoginRequest, response: Response):
         max_age=SESSION_DURATION_SECONDS,
         path="/"
     )
-    return {"status": "ok", "token": token, "message": "logged_in", "message_ja": "ログインしました。", "message_en": "Logged in successfully."}
+    return {
+        "status": "ok",
+        "token": token,
+        "message": "logged_in",
+        "message_ja": "ログインしました。",
+        "message_en": "Logged in successfully."
+    }
+
 
 @router.post("/logout")
 def logout(response: Response, request: Request, cp_session: str | None = Cookie(None)):
-    auth_header = request.headers.get("Authorization")
-    token = None
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ", 1)[1]
-    elif cp_session:
-        token = cp_session
+    token = extract_token_from_request(request, cp_session)
 
     if token and token in SESSION_TOKENS:
         del SESSION_TOKENS[token]
 
     response.delete_cookie("cp_session", path="/")
-    return {"status": "ok", "message": "logged_out", "message_ja": "ログアウトしました。", "message_en": "Logged out successfully."}
+    return {
+        "status": "ok",
+        "message": "logged_out",
+        "message_ja": "ログアウトしました。",
+        "message_en": "Logged out successfully."
+    }
