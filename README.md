@@ -1,6 +1,11 @@
 # Geese-in-the-Box (旧 Goose-in-the-Box): 複数AIエージェントのネットワーク隔離・監査サンドボックス基盤
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/Geese-in-the-Box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/Geese-in-the-Box/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
+[![Docker Compose](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+
+[English](README.en.md) | 日本語
 
 ## 📌 プロジェクト概要 (What is Geese-in-the-Box?)
 **Geese-in-the-Box**（旧 Goose-in-the-Box）は、Goose、OpenCode、OpenClaw 2.0 などの自律型 AI エージェントを、安全に隔離・実行するための「Docker 隔離 + Squid 監査プロキシ基盤」です。AIエージェントの通信状況を監視しながら動作をさせることができます。

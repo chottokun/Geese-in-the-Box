@@ -1,6 +1,11 @@
 # Geese-in-the-Box (formerly Goose-in-the-Box): Network Isolation & Audit Sandbox for Multi-AI Agents
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/Geese-in-the-Box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/Geese-in-the-Box/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
+[![Docker Compose](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+
+English | [日本語](README.md)
 
 ## 📌 Project Overview (What is Geese-in-the-Box?)
 **Geese-in-the-Box** (formerly Goose-in-the-Box) is a "Docker Isolation + Squid Audit Proxy Infrastructure" designed to safely execute autonomous AI agents like Goose, OpenCode, and OpenClaw 2.0.
