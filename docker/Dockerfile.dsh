@@ -15,6 +15,12 @@ FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
+# Node.js 22 のマルチステージコピー (DSH の Node >= 20.12.0 要件を満たす)
+COPY --from=builder /usr/local/bin/node /usr/local/bin/
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
 # 1. 基本ツール + GUI/noVNC + 日本語入力 + Chromium
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -24,7 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     htop \
     jq \
-    nodejs \
     # GUI デスクトップ環境 (Xfce4 + Xvfb + D-Bus)
     xvfb \
     xfce4 \
@@ -65,7 +70,7 @@ RUN printf "[Groups/0]\nName=Default\nDefault Layout=jp\nDefaultIM=mozc\n\n[Grou
     && chown -R sandboxuser:sandboxuser /home/sandboxuser/.config
 
 # 5. DSH CLI ラッパーの作成
-RUN printf '#!/bin/bash\ncd /opt/dsh\nexec node ./lib/cli.js "$@"\n' > /usr/local/bin/dsh \
+RUN printf '#!/bin/bash\ncd /opt/dsh\nexec node /opt/dsh/apps/cli/lib/bin.js "$@"\n' > /usr/local/bin/dsh \
     && chmod +x /usr/local/bin/dsh
 
 # 6. デスクトップアイコンの作成
