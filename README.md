@@ -1,6 +1,11 @@
 # Geese-in-the-Box (旧 Goose-in-the-Box): 複数AIエージェントのネットワーク隔離・監査サンドボックス基盤
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/Geese-in-the-Box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/Geese-in-the-Box/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
+[![Docker Compose](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+
+[English](README.en.md) | 日本語
 
 ## 📌 プロジェクト概要 (What is Geese-in-the-Box?)
 **Geese-in-the-Box**（旧 Goose-in-the-Box）は、Goose、OpenCode、OpenClaw 2.0 などの自律型 AI エージェントを、安全に隔離・実行するための「Docker 隔離 + Squid 監査プロキシ基盤」です。AIエージェントの通信状況を監視しながら動作をさせることができます。
@@ -30,6 +35,8 @@ Geese-in-the-Box は、これらのリスクをある程度解決し、エージ
 - **Goose Agent** (Block社製 / CLI・GUI対応)
 - **OpenCode** (オープンソース / ターミナル・GUI対応)
 - **OpenClaw 2.0** (最新自律エージェント / ターミナル・GUI対応)
+- **DeepSeek Harness (dsh)** (プラグイン型エージェントハーネス / ターミナル・GUI対応)
+- **Hermes Agent** (Nous Research製 自己改善型エージェント / ターミナル・GUI対応)
 
 ---
 
@@ -42,6 +49,7 @@ cp .env.example .env
 ```
 > [!TIP]
 > `.env` には OpenAI や Anthropic などの API キーを設定します。ローカルLLM (Ollama等) を使用する場合は不要です。
+> ポート体系の詳細は [config/ports.env](config/ports.env) または [統合ポートマップ仕様書](docs/infrastructure/port_mappings.md) を参照してください。
 
 ### Step 2: 起動
 Docker イメージをビルドし、エージェントを起動します。用途に合わせてコマンドを選択してください。
@@ -60,15 +68,25 @@ make session
 **各エージェントの起動コマンド**:
 - **Goose**:
   - ターミナル: `make session`
-  - GUI (ブラウザ仮想デスクトップ): `make gui`
+  - GUI (ブラウザ仮想デスクトップ): `make gui` (ポート: 6080)
 - **OpenCode**:
   - ビルド: `make build-opencode`
   - ターミナル: `make run-opencode`
-  - GUI (ブラウザ仮想デスクトップ): `make run-opencode-gui`
+  - GUI (ブラウザ仮想デスクトップ): `make run-opencode-gui` (ポート: 6081)
 - **OpenClaw 2.0**:
   - ビルド: `make build-openclaw`
   - ターミナル: `make run-openclaw`
-  - GUI (ブラウザ仮想デスクトップ): `make run-openclaw-gui`
+  - GUI (ブラウザ仮想デスクトップ): `make run-openclaw-gui` (ポート: 6082)
+- **DeepSeek Harness (`dsh`)**:
+  - ビルド: `make build-dsh`
+  - ターミナル: `make run-dsh`
+  - GUI (ブラウザ仮想デスクトップ): `make run-dsh-gui` (ポート: 6083)
+  - アップグレード: `make upgrade-dsh`
+- **Hermes Agent**:
+  - ビルド: `make build-hermes`
+  - ターミナル: `make run-hermes`
+  - GUI (ブラウザ仮想デスクトップ): `make run-hermes-gui` (ポート: 6084)
+  - アップグレード: `make upgrade-hermes`
 
 **コンテナの再作成・リセット & 実行オプション**:
 - **コンテナ破棄・強制再作成**: `make recreate` (既存コンテナを破棄してイメージから再生成)

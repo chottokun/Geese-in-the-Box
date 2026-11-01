@@ -63,3 +63,9 @@ registry.npmjs.org
 api.telegram.org
 discord.com
 gateway.discord.gg
+
+# --- Hermes Agent ---
+# api.telegram.org
+# discord.com
+# gateway.discord.gg
+# slack.com

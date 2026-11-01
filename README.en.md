@@ -1,6 +1,11 @@
 # Geese-in-the-Box (formerly Goose-in-the-Box): Network Isolation & Audit Sandbox for Multi-AI Agents
 
 [![CI Sandbox Egress & Audit Test](https://github.com/chottokun/Geese-in-the-Box/actions/workflows/ci.yml/badge.svg)](https://github.com/chottokun/Geese-in-the-Box/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
+[![Docker Compose](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+
+English | [日本語](README.md)
 
 ## 📌 Project Overview (What is Geese-in-the-Box?)
 **Geese-in-the-Box** (formerly Goose-in-the-Box) is a "Docker Isolation + Squid Audit Proxy Infrastructure" designed to safely execute autonomous AI agents like Goose, OpenCode, and OpenClaw 2.0.
@@ -29,6 +34,8 @@ The core concept of this infrastructure is the **Defense in Depth** model.
 - **Goose Agent** (by Block / CLI & GUI support)
 - **OpenCode** (Open-source / Terminal & GUI support)
 - **OpenClaw 2.0** (Latest autonomous agent / Terminal & GUI support)
+- **DeepSeek Harness (dsh)** (Plugin-based agent harness / Terminal & GUI support)
+- **Hermes Agent** (Self-improving agent by Nous Research / Terminal & GUI support)
 
 ---
 
@@ -41,6 +48,7 @@ cp .env.example .env
 ```
 > [!TIP]
 > Use `.env` to configure API keys for OpenAI, Anthropic, etc. This is not required if using a local LLM (like Ollama).
+> For port map specifications, see [config/ports.env](config/ports.env) or [docs/infrastructure/port_mappings.md](docs/infrastructure/port_mappings.md).
 
 ### Step 2: Bootup
 Build the Docker images and start the agent. Choose the command based on your workflow.
@@ -59,15 +67,25 @@ make session
 **Agent startup commands**:
 - **Goose**:
   - Terminal: `make session`
-  - GUI (Browser Virtual Desktop): `make gui`
+  - GUI (Browser Virtual Desktop): `make gui` (port: 6080)
 - **OpenCode**:
   - Build: `make build-opencode`
   - Terminal: `make run-opencode`
-  - GUI (Browser Virtual Desktop): `make run-opencode-gui`
+  - GUI (Browser Virtual Desktop): `make run-opencode-gui` (port: 6081)
 - **OpenClaw 2.0**:
   - Build: `make build-openclaw`
   - Terminal: `make run-openclaw`
-  - GUI (Browser Virtual Desktop): `make run-openclaw-gui`
+  - GUI (Browser Virtual Desktop): `make run-openclaw-gui` (port: 6082)
+- **DeepSeek Harness (`dsh`)**:
+  - Build: `make build-dsh`
+  - Terminal: `make run-dsh`
+  - GUI (Browser Virtual Desktop): `make run-dsh-gui` (port: 6083)
+  - Upgrade: `make upgrade-dsh`
+- **Hermes Agent**:
+  - Build: `make build-hermes`
+  - Terminal: `make run-hermes`
+  - GUI (Browser Virtual Desktop): `make run-hermes-gui` (port: 6084)
+  - Upgrade: `make upgrade-hermes`
 
 **Container Recreation, Reset & Execution Options**:
 - **Recreate containers**: `make recreate` (Drop existing containers and force-recreate fresh from image)

@@ -68,6 +68,14 @@ def build_command(action: str, use_gpu: bool = False, keep_container: bool = Fal
         cmd_args.append("run-openclaw")
     elif action == "run_openclaw_gui":
         cmd_args.append("run-openclaw-gui")
+    elif action == "run_dsh_cli":
+        cmd_args.append("run-dsh")
+    elif action == "run_dsh_gui":
+        cmd_args.append("run-dsh-gui")
+    elif action == "run_hermes_cli":
+        cmd_args.append("run-hermes")
+    elif action == "run_hermes_gui":
+        cmd_args.append("run-hermes-gui")
     elif action == "control":
         cmd_args.append("control")
     elif action == "report":
@@ -103,6 +111,10 @@ def main():
         questionary.Choice("🚀 OpenCode (GUI)", value="run_opencode_gui"),
         questionary.Choice("🚀 OpenClaw 2.0 (ターミナル)", value="run_openclaw_cli"),
         questionary.Choice("🚀 OpenClaw 2.0 (GUI)", value="run_openclaw_gui"),
+        questionary.Choice("🚀 DeepSeek Harness (dsh) (ターミナル)", value="run_dsh_cli"),
+        questionary.Choice("🚀 DeepSeek Harness (dsh) (GUI)", value="run_dsh_gui"),
+        questionary.Choice("🚀 Hermes (ターミナル)", value="run_hermes_cli"),
+        questionary.Choice("🚀 Hermes (GUI)", value="run_hermes_gui"),
         questionary.Separator(),
         questionary.Choice("🎛️  統合コントロールパネルの起動", value="control"),
         questionary.Choice("📊 監査レポート生成・表示", value="report"),

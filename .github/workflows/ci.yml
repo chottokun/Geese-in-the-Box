@@ -69,9 +69,9 @@ jobs:
       - name: 3. シェルスクリプトの静的解析 (ShellCheck または bash -n)
         run: |
           if command -v shellcheck >/dev/null 2>&1; then
-            shellcheck bin/*.sh
+            shellcheck -e SC1091 bin/*.sh bin/lib/*.sh
           else
-            bash -n bin/*.sh
+            bash -n bin/*.sh bin/lib/*.sh
           fi
 
       - name: 4. Nginx 設定ファイルの構文検証

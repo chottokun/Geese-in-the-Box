@@ -1,0 +1,88 @@
+FROM node:22-bookworm AS builder
+
+# DSH バージョン指定
+ARG DSH_VERSION=dsh-v0.2.1-alpha.1
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /build
+RUN git clone -b ${DSH_VERSION} https://github.com/deepseek-ai/deepseek-harness.git dsh \
+    && cd dsh \
+    && pnpm install \
+    && pnpm run build
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+# Node.js 22 のマルチステージコピー (DSH の Node >= 20.12.0 要件を満たす)
+COPY --from=builder /usr/local/bin/node /usr/local/bin/
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
+# 1. 基本ツール + GUI/noVNC + 日本語入力 + Chromium
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    ca-certificates \
+    git \
+    procps \
+    htop \
+    jq \
+    # GUI デスクトップ環境 (Xfce4 + Xvfb + D-Bus)
+    xvfb \
+    xfce4 \
+    xfce4-terminal \
+    dbus-x11 \
+    dbus \
+    # VNC & Webブラウザ接続 (noVNC)
+    x11vnc \
+    novnc \
+    websockify \
+    # 日本語フォント
+    fonts-noto-cjk \
+    fonts-noto-color-emoji \
+    # 日本語入力システム (Fcitx5 + Mozc)
+    fcitx5 \
+    fcitx5-mozc \
+    fcitx5-frontend-gtk2 \
+    fcitx5-frontend-gtk3 \
+    fcitx5-frontend-qt5 \
+    # Web UI 表示用ブラウザ
+    chromium \
+    chromium-sandbox \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. ビルドした DSH の配置
+COPY --from=builder /build/dsh /opt/dsh
+
+# 3. 非rootユーザーの作成
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} sandboxuser \
+    && useradd -m -u ${UID} -g sandboxuser -s /bin/bash sandboxuser \
+    && mkdir -p /workspace /home/sandboxuser/.config/fcitx5 /home/sandboxuser/Desktop \
+    && chown -R sandboxuser:sandboxuser /home/sandboxuser /workspace /opt/dsh
+
+# 4. デスクトップ設定
+RUN printf "[Groups/0]\nName=Default\nDefault Layout=jp\nDefaultIM=mozc\n\n[Groups/0/Items/0]\nName=keyboard-jp\nLayout=\n\n[Groups/0/Items/1]\nName=mozc\nLayout=\n\n[GroupOrder]\n0=Default\n" > /home/sandboxuser/.config/fcitx5/profile \
+    && chown -R sandboxuser:sandboxuser /home/sandboxuser/.config
+
+# 5. DSH CLI ラッパーの作成
+RUN printf '#!/bin/bash\ncd /opt/dsh\nexec node /opt/dsh/apps/cli/lib/bin.js "$@"\n' > /usr/local/bin/dsh \
+    && chmod +x /usr/local/bin/dsh
+
+# 6. デスクトップアイコンの作成
+RUN printf '[Desktop Entry]\nVersion=1.0\nType=Application\nName=DeepSeek Harness\nComment=DeepSeek Harness GUI\nExec=chromium --no-sandbox http://127.0.0.1:4000\nIcon=chromium\nTerminal=false\nCategories=Development;\n' > /home/sandboxuser/Desktop/dsh.desktop \
+    && chmod +x /home/sandboxuser/Desktop/dsh.desktop \
+    && chown sandboxuser:sandboxuser /home/sandboxuser/Desktop/dsh.desktop
+
+# 7. 実行スクリプトのコピー
+COPY bin/start-dsh-desktop.sh /bin/start-dsh-desktop.sh
+RUN chmod +x /bin/start-dsh-desktop.sh
+
+USER sandboxuser
+WORKDIR /workspace
+
+CMD ["/bin/bash"]

@@ -1,0 +1,11 @@
+plugins:
+  "@cordisjs/plugin-server":
+    port: 4000
+    host: "127.0.0.1"
+
+  chat:
+    llm:
+      provider: openai
+      endpoint: ${OPENAI_BASE_URL:-http://host.docker.internal:11434/v1}
+      apiKey: ${OPENAI_API_KEY:-sk-dummy}
+      model: ${GOOSE_MODEL:-gpt-4o}

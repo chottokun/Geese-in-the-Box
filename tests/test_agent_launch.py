@@ -17,6 +17,8 @@ def test_start_scripts_exist_and_syntax():
         "bin/start-opencode-desktop.sh",
         "bin/start-openclaw.sh",
         "bin/start-openclaw-desktop.sh",
+        "bin/start-dsh-desktop.sh",
+        "bin/start-hermes-desktop.sh",
     ]
     for script in scripts:
         assert os.path.exists(script), f"{script} が見つかりません"
@@ -39,6 +41,8 @@ def test_makefile_targets_exist():
         "run-opencode-gui": "bin/start-opencode-desktop.sh",
         "run-openclaw": "bin/start-openclaw.sh",
         "run-openclaw-gui": "bin/start-openclaw-desktop.sh",
+        "run-dsh-gui": "bin/start-dsh-desktop.sh",
+        "run-hermes-gui": "bin/start-hermes-desktop.sh",
     }
 
     for target, expected_cmd in targets.items():
@@ -71,6 +75,16 @@ def test_docker_compose_mounts():
     assert any("bin/start-openclaw.sh" in v for v in openclaw_volumes), "openclaw サービスに start-openclaw.sh がマウントされていません"
     assert any("bin/start-openclaw-desktop.sh" in v for v in openclaw_volumes), "openclaw サービスに start-openclaw-desktop.sh がマウントされていません"
 
+    # dsh
+    dsh_svc = services.get("dsh", {})
+    dsh_volumes = dsh_svc.get("volumes", [])
+    assert any("bin/start-dsh-desktop.sh" in v for v in dsh_volumes), "dsh サービスに start-dsh-desktop.sh がマウントされていません"
+
+    # hermes
+    hermes_svc = services.get("hermes", {})
+    hermes_volumes = hermes_svc.get("volumes", [])
+    assert any("bin/start-hermes-desktop.sh" in v for v in hermes_volumes), "hermes サービスに start-hermes-desktop.sh がマウントされていません"
+
 
 
 
@@ -82,3 +96,5 @@ def test_launcher_targets_match_makefile():
     assert launcher.build_command("run_opencode_gui")[1] == ["make", "run-opencode-gui"]
     assert launcher.build_command("run_openclaw_cli")[1] == ["make", "run-openclaw"]
     assert launcher.build_command("run_openclaw_gui")[1] == ["make", "run-openclaw-gui"]
+    assert launcher.build_command("run_dsh_gui")[1] == ["make", "run-dsh-gui"]
+    assert launcher.build_command("run_hermes_gui")[1] == ["make", "run-hermes-gui"]

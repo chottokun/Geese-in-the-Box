@@ -58,6 +58,18 @@ help:
 	@echo "   make run-openclaw    : OpenClaw 対話セッションの起動 (ターミナル)"
 	@echo "   make run-openclaw-gui: OpenClaw GUI デスクトップ環境の起動 (http://localhost:6082/vnc.html)"
 	@echo "   make stop-openclaw   : OpenClaw コンテナの停止"
+	@echo ""
+	@echo " [DeepSeek Harness (dsh) 操作]"
+	@echo "   make build-dsh       : dsh コンテナのビルド"
+	@echo "   make run-dsh         : dsh 対話セッションの起動 (ターミナル)"
+	@echo "   make run-dsh-gui     : dsh GUI デスクトップ環境の起動 (http://localhost:6083/vnc.html)"
+	@echo "   make upgrade-dsh     : dsh のアップグレード"
+	@echo ""
+	@echo " [Hermes 操作]"
+	@echo "   make build-hermes    : Hermes コンテナのビルド"
+	@echo "   make run-hermes      : Hermes 対話セッションの起動 (ターミナル)"
+	@echo "   make run-hermes-gui  : Hermes GUI デスクトップ環境の起動 (http://localhost:6084/vnc.html)"
+	@echo "   make upgrade-hermes  : Hermes のアップグレード"
 	@echo "=========================================================="
 
 # コンテナイメージのビルド
@@ -162,6 +174,47 @@ stop-openclaw stop-openclaw-gui:
 	$(DOCKER_COMPOSE) --profile openclaw stop openclaw
 	@docker rm -f openclaw-agent 2>/dev/null || true
 
+# DeepSeek Harness (dsh) コンテナのビルド
+build-dsh:
+	$(DOCKER_COMPOSE) --profile dsh build dsh
+
+# DeepSeek Harness (dsh) 対話セッションの起動 (TUI モード)
+run-dsh: up-proxy
+	$(DOCKER_COMPOSE) --profile dsh run $(RM_FLAG) dsh dsh
+
+# DeepSeek Harness (dsh) GUI デスクトップ環境の起動
+run-dsh-gui: up-proxy
+	@echo "=========================================================="
+	@echo " dsh GUI デスクトップ環境を起動しています..."
+	@echo " 起動後、ブラウザで以下を開いてください:"
+	@echo " 👉 http://localhost:6083/vnc.html"
+	@echo "=========================================================="
+	$(DOCKER_COMPOSE) --profile dsh run $(RM_FLAG) --name dsh-agent dsh /bin/start-dsh-desktop.sh
+
+# DeepSeek Harness (dsh) のアップグレード
+upgrade-dsh:
+	$(DOCKER_COMPOSE) --profile dsh build --no-cache dsh
+
+# Hermes コンテナのビルド
+build-hermes:
+	$(DOCKER_COMPOSE) --profile hermes build hermes
+
+# Hermes 対話セッションの起動 (TUI モード)
+run-hermes: up-proxy
+	$(DOCKER_COMPOSE) --profile hermes run $(RM_FLAG) hermes /home/sandboxuser/.local/bin/hermes
+
+# Hermes GUI デスクトップ環境の起動
+run-hermes-gui: up-proxy
+	@echo "=========================================================="
+	@echo " Hermes GUI デスクトップ環境を起動しています..."
+	@echo " 起動後、ブラウザで以下を開いてください:"
+	@echo " 👉 http://localhost:6084/vnc.html"
+	@echo "=========================================================="
+	$(DOCKER_COMPOSE) --profile hermes run $(RM_FLAG) --name hermes-agent hermes /bin/start-hermes-desktop.sh
+
+# Hermes のアップグレード
+upgrade-hermes:
+	$(DOCKER_COMPOSE) --profile hermes build --no-cache hermes
 
 # Goose Desktop 向け ACP サーバー起動 (ポート 3284)
 serve: up-proxy
