@@ -1,12 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+# shellcheck disable=SC1091
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "${SCRIPT_DIR}/lib/desktop-common.sh" ]; then
-    # shellcheck source=bin/lib/desktop-common.sh
     source "${SCRIPT_DIR}/lib/desktop-common.sh"
 elif [ -f "/bin/host-scripts/lib/desktop-common.sh" ]; then
-    # shellcheck source=bin/lib/desktop-common.sh
     source "/bin/host-scripts/lib/desktop-common.sh"
 elif [ -f "/bin/lib/desktop-common.sh" ]; then
     source "/bin/lib/desktop-common.sh"
@@ -22,9 +21,8 @@ init_desktop_environment 6083
 echo "DSH Web サーバーを起動しています..."
 (
     cd /opt/dsh
-    node ./lib/cli.js web --host 127.0.0.1 --port 4000
+    node /opt/dsh/apps/cli/lib/bin.js web --host 127.0.0.1 --port 4000
 ) &
-DSH_PID=$!
 
 # 3. 少し待ってから Chromium を起動
 sleep 5

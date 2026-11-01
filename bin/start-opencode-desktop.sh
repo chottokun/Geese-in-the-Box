@@ -4,6 +4,7 @@ set -euo pipefail
 # ==========================================
 # Geese-in-the-Box: OpenCode GUI / noVNC 起動スクリプト
 # ==========================================
+# shellcheck disable=SC1091
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "${SCRIPT_DIR}/lib/desktop-common.sh" ]; then
     # shellcheck source=bin/lib/desktop-common.sh
